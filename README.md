@@ -1,4 +1,4 @@
-# Web 3 Miner
+# Test deploy – Greg was here# Web 3 Miner
 
 Web 3 Miner is a browser‑based Proof‑of‑Work engine powered by Keccak‑256.  
 Users mine shares directly from their browser using a lightweight Web Worker, submit valid shares on‑chain, and earn rewards based on their mining performance.
