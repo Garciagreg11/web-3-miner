@@ -1,16 +1,14 @@
-import "@nomicfoundation/hardhat-toolbox";
-import "@openzeppelin/hardhat-upgrades";
-import dotenv from "dotenv";
-dotenv.config();
+require("@nomicfoundation/hardhat-toolbox");
 
-export default {
+const BASE_SEPOLIA_URL = process.env.BASE_SEPOLIA_URL || "";
+const DEPLOYER_PRIVATE_KEY = process.env.DEPLOYER_PRIVATE_KEY || "";
+
+module.exports = {
   solidity: "0.8.24",
   networks: {
     baseSepolia: {
-      url: process.env.RPC_URL,          // should be https://sepolia.base.org
-      accounts: [process.env.PRIVATE_KEY],
-      gasPrice: 5000000000,
-      nonce: "pending"
+      url: BASE_SEPOLIA_URL,
+      accounts: DEPLOYER_PRIVATE_KEY ? [DEPLOYER_PRIVATE_KEY] : []
     }
   }
 };
