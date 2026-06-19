@@ -1,4 +1,4 @@
-import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt } from 'wagmi'
+import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt, useChainId } from 'wagmi'
 import { useState, useEffect } from 'react'
 import { parseEther } from 'viem'
 
@@ -20,6 +20,7 @@ const MINER_CONTRACT_ABI = [
 
 function App() {
   const { address, isConnected } = useAccount()
+  const chainId = useChainId() // Extracts the correct active chain ID dynamically
   const { connect, connectors, error: connectError } = useConnect()
   const { disconnect } = useDisconnect()
 
@@ -64,6 +65,7 @@ function App() {
       abi: MINER_CONTRACT_ABI,
       functionName: 'claimMinerRewards',
       args: [parseEther(pendingGG72.toFixed(4).toString())],
+      chainId: chainId, // Bypasses internal connector.getChainId() error by passing it explicitly
     })
 
     console.log(`[Protocol Audit] Initiated on-chain split claim for total: ${pendingGG72} GG72`)
