@@ -1,0 +1,193 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/home/garcia/web-3-miner/contracts/MiningSession.sol": {
+      "lastModificationDate": 1781565883833,
+      "contentHash": "0db87056ede69a95a487974106a8e82d",
+      "sourceName": "contracts/MiningSession.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [
+        "./RewardsVault.sol"
+      ],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "MiningSession"
+      ]
+    },
+    "/home/garcia/web-3-miner/contracts/RewardsVault.sol": {
+      "lastModificationDate": 1780093033632,
+      "contentHash": "c1ad1e3b4cc8a9f079711d844e640e06",
+      "sourceName": "contracts/RewardsVault.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "IERC20",
+        "RewardsVault"
+      ]
+    },
+    "/home/garcia/web-3-miner/contracts/MockToken.sol": {
+      "lastModificationDate": 1774888618746,
+      "contentHash": "0fa1f3827075a848d928f2fe256e91b9",
+      "sourceName": "contracts/MockToken.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "MockToken"
+      ]
+    },
+    "/home/garcia/web-3-miner/contracts/RewardToken.sol": {
+      "lastModificationDate": 1775596321071,
+      "contentHash": "1825af6180210050b3abb64a012ce2e6",
+      "sourceName": "contracts/RewardToken.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "RewardToken"
+      ]
+    },
+    "/home/garcia/web-3-miner/contracts/WorkVerifier.sol": {
+      "lastModificationDate": 1780093295168,
+      "contentHash": "d2634bec19024da6896ba75a9f20407a",
+      "sourceName": "contracts/WorkVerifier.sol",
+      "solcConfig": {
+        "version": "0.8.24",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata",
+                "storageLayout"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.24"
+      ],
+      "artifacts": [
+        "WorkVerifier"
+      ]
+    }
+  }
+}

@@ -1,0 +1,140 @@
+import { useAccount, useConnect, useDisconnect } from 'wagmi';
+import { useState } from 'react';
+
+function App() {
+  const { address, isConnected } = useAccount();
+  const { connect, connectors, error } = useConnect();
+  const { disconnect } = useDisconnect();
+  const [isMining, setIsMining] = useState(false);
+
+  return (
+    <div style={{
+      backgroundColor: '#0a0a0c',
+      color: '#fff',
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontFamily: 'system-ui, -apple-system, sans-serif'
+    }}>
+      {isConnected ? (
+        // 🚀 CONNECTED STATE: THE DASHBOARD
+        <div style={{
+          width: '90%',
+          maxWidth: '800px',
+          padding: '40px',
+          background: '#131316',
+          borderRadius: '16px',
+          border: '1px solid #222',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'between', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
+            <h1 style={{ color: '#00ffcc', margin: 0, fontSize: '28px' }}>⛏️ Web-3 Miner Dashboard</h1>
+            <button 
+              onClick={() => disconnect()}
+              style={{
+                background: '#222',
+                color: '#aaa',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: 'pointer'
+              }}
+            >
+              Disconnect
+            </button>
+          </div>
+
+          <p style={{ color: '#888', marginTop: 0 }}>
+            Wallet Address: <span style={{ color: '#fff', fontFamily: 'monospace', background: '#202024', padding: '4px 8px', borderRadius: '4px' }}>{address}</span>
+          </p>
+          
+          <hr style={{ borderColor: '#222', margin: '30px 0' }} />
+          
+          {/* Hardware & Mining Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '30px' }}>
+            <div style={{ background: '#1c1c21', padding: '25px', borderRadius: '12px', border: '1px solid #2a2a30' }}>
+              <h3 style={{ color: '#aaa', margin: '0 0 10px 0', fontSize: '14px', textTransform: 'uppercase' }}>Hash Rate</h3>
+              <p style={{ fontSize: '32px', fontWeight: 'bold', margin: 0, color: isMining ? '#00ffcc' : '#ff4444' }}>
+                {isMining ? '45.2 MH/s' : '0.0 MH/s'}
+              </p>
+            </div>
+            <div style={{ background: '#1c1c21', padding: '25px', borderRadius: '12px', border: '1px solid #2a2a30' }}>
+              <h3 style={{ color: '#aaa', margin: '0 0 10px 0', fontSize: '14px', textTransform: 'uppercase' }}>Hardware Status</h3>
+              <p style={{ fontSize: '18px', fontWeight: '600', margin: 0, color: '#00ffcc' }}>
+                GPU Active (Linux Host via WSL2)
+              </p>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => setIsMining(!isMining)}
+            style={{
+              width: '100%',
+              padding: '16px',
+              fontWeight: 'bold',
+              fontSize: '16px',
+              background: isMining ? '#ff4444' : '#00ffcc',
+              color: '#000',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              transition: 'background 0.2s'
+            }}
+          >
+            {isMining ? '🛑 Stop Miner' : '⚡ Start Web3 Miner'}
+          </button>
+        </div>
+      ) : (
+        // 🔒 DISCONNECTED STATE: CONNECT WALLET PROMPT
+        <div style={{
+          textAlign: 'center',
+          padding: '50px 40px',
+          background: '#131316',
+          borderRadius: '16px',
+          border: '1px solid #331111',
+          maxWidth: '450px',
+          width: '90%',
+          boxShadow: '0 10px 30px rgba(0,0,0,0.7)'
+        }}>
+          <div style={{ fontSize: '50px', marginBottom: '10px' }}>🔒</div>
+          <h2 style={{ margin: '0 0 10px 0', fontSize: '22px' }}>Dashboard Locked</h2>
+          <p style={{ color: '#aaa', fontSize: '14px', marginBottom: '30px' }}>
+            Please connect your MetaMask wallet to interface with your Web3 GPU hardware miner.
+          </p>
+
+          {/* Render available connectors (like MetaMask) */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            {connectors.map((connector) => (
+              <button
+                key={connector.uid}
+                onClick={() => connect({ connector })}
+                style={{
+                  padding: '14px',
+                  background: '#00ffcc',
+                  color: '#000',
+                  border: 'none',
+                  fontWeight: 'bold',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
+                }}
+              >
+                Connect with {connector.name}
+              </button>
+            ))}
+          </div>
+
+          {error && (
+            <p style={{ color: '#ff4444', fontSize: '12px', marginTop: '15px', wordBreak: 'break-word' }}>
+              Error: {error.message}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default App;

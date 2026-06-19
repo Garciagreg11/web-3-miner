@@ -1,0 +1,784 @@
+{
+  "version": "3.4",
+  "log": [
+    {
+      "contracts/MiningSession.sol:MiningSession": {
+        "src": "contracts/MiningSession.sol:6",
+        "version": {
+          "withMetadata": "9dcfdfb34280ca88b9f321625ff8b88fe4131dbe9b97165dde0a2e058bef4e32",
+          "withoutMetadata": "f6bc2a8b9828e69c02796b8bc1c0a4aabd4caa81f093cd66b994249547f5dcf7",
+          "linkedWithoutMetadata": "f6bc2a8b9828e69c02796b8bc1c0a4aabd4caa81f093cd66b994249547f5dcf7"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "(address,address,uint256,uint256)",
+          "setDifficulty(uint256)",
+          "startNewEpoch(uint256)",
+          "updateParams(uint256)",
+          "setDevWallet(address)",
+          "setDevFee(uint256)",
+          "submitShare(uint256)",
+          "pendingRewards(uint256,address)",
+          "claimRewards(uint256)",
+          "getShares(uint256,address)",
+          "getWork()",
+          "epochHash(address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "MiningSession",
+            "src": "contracts/MiningSession.sol:40"
+          },
+          {
+            "kind": "state-variable-assignment",
+            "name": "devFeeBps",
+            "src": "contracts/MiningSession.sol:16"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "vault",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_contract(RewardsVault)605",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:12"
+            },
+            {
+              "label": "owner",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_address",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:14"
+            },
+            {
+              "label": "devWallet",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_address",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:15"
+            },
+            {
+              "label": "devFeeBps",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:16"
+            },
+            {
+              "label": "currentEpoch",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:18"
+            },
+            {
+              "label": "target",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:19"
+            },
+            {
+              "label": "rewardPerShare",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:20"
+            },
+            {
+              "label": "difficulty",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:21"
+            },
+            {
+              "label": "epochMiners",
+              "offset": 0,
+              "slot": "8",
+              "type": "t_mapping(t_uint256,t_mapping(t_address,t_struct(MinerEpochInfo)7_storage))",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:24"
+            },
+            {
+              "label": "usedNonce",
+              "offset": 0,
+              "slot": "9",
+              "type": "t_mapping(t_uint256,t_mapping(t_address,t_mapping(t_uint256,t_bool)))",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:25"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_contract(RewardsVault)605": {
+              "label": "contract RewardsVault",
+              "numberOfBytes": "20"
+            },
+            "t_mapping(t_address,t_mapping(t_uint256,t_bool))": {
+              "label": "mapping(address => mapping(uint256 => bool))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_struct(MinerEpochInfo)7_storage)": {
+              "label": "mapping(address => struct MiningSession.MinerEpochInfo)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_bool)": {
+              "label": "mapping(uint256 => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_mapping(t_address,t_mapping(t_uint256,t_bool)))": {
+              "label": "mapping(uint256 => mapping(address => mapping(uint256 => bool)))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_mapping(t_address,t_struct(MinerEpochInfo)7_storage))": {
+              "label": "mapping(uint256 => mapping(address => struct MiningSession.MinerEpochInfo))",
+              "numberOfBytes": "32"
+            },
+            "t_struct(MinerEpochInfo)7_storage": {
+              "label": "struct MiningSession.MinerEpochInfo",
+              "members": [
+                {
+                  "label": "shares",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "claimed",
+                  "type": "t_bool",
+                  "offset": 0,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      },
+      "contracts/RewardsVault.sol:IERC20": {
+        "src": "contracts/RewardsVault.sol:4",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "transfer(address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      },
+      "contracts/RewardsVault.sol:RewardsVault": {
+        "src": "contracts/RewardsVault.sol:8",
+        "version": {
+          "withMetadata": "3b60803332643d8634e68a270042e9bf32e3eed6e3fca4b72582b62b8de73e9f",
+          "withoutMetadata": "7ba835876c2269f6bd1d0b70aaa1c539e955d89e9b04a0aca03d8d2e58fbd30a",
+          "linkedWithoutMetadata": "7ba835876c2269f6bd1d0b70aaa1c539e955d89e9b04a0aca03d8d2e58fbd30a"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "(address)",
+          "distribute(address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "RewardsVault",
+            "src": "contracts/RewardsVault.sol:12"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "owner",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "RewardsVault",
+              "src": "contracts/RewardsVault.sol:9"
+            },
+            {
+              "label": "rewardToken",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_contract(IERC20)551",
+              "contract": "RewardsVault",
+              "src": "contracts/RewardsVault.sol:10"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_contract(IERC20)551": {
+              "label": "contract IERC20",
+              "numberOfBytes": "20"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      }
+    },
+    {
+      "contracts/MiningSession.sol:MiningSession": {
+        "src": "contracts/MiningSession.sol:6",
+        "version": {
+          "withMetadata": "3143d8ba7f539d1f16fbafe2f069d0d8fb1a89ca4f4bd90a8989f735f7192f1b",
+          "withoutMetadata": "fc70c55a81e9cf0598b10326346fd55b00f75e53155385e922bbe0294ac346d0",
+          "linkedWithoutMetadata": "fc70c55a81e9cf0598b10326346fd55b00f75e53155385e922bbe0294ac346d0"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "(address,uint256,uint256)",
+          "setDifficulty(uint256)",
+          "startNewEpoch(uint256)",
+          "updateParams(uint256)",
+          "submitShare(uint256)",
+          "pendingRewards(address)",
+          "claimRewards()",
+          "getShares(address)",
+          "getWork(address)",
+          "epochHash(address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "MiningSession",
+            "src": "contracts/MiningSession.sol:35"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "vault",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_contract(RewardsVault)856",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:12"
+            },
+            {
+              "label": "owner",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_address",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:14"
+            },
+            {
+              "label": "currentEpoch",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:16"
+            },
+            {
+              "label": "target",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:17"
+            },
+            {
+              "label": "rewardPerShare",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:18"
+            },
+            {
+              "label": "difficulty",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_uint256",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:19"
+            },
+            {
+              "label": "miners",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_mapping(t_address,t_struct(MinerInfo)7_storage)",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:21"
+            },
+            {
+              "label": "usedNonce",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_mapping(t_uint256,t_mapping(t_address,t_mapping(t_uint256,t_bool)))",
+              "contract": "MiningSession",
+              "src": "contracts/MiningSession.sol:22"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_contract(RewardsVault)856": {
+              "label": "contract RewardsVault",
+              "numberOfBytes": "20"
+            },
+            "t_mapping(t_address,t_mapping(t_uint256,t_bool))": {
+              "label": "mapping(address => mapping(uint256 => bool))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_struct(MinerInfo)7_storage)": {
+              "label": "mapping(address => struct MiningSession.MinerInfo)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_bool)": {
+              "label": "mapping(uint256 => bool)",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_uint256,t_mapping(t_address,t_mapping(t_uint256,t_bool)))": {
+              "label": "mapping(uint256 => mapping(address => mapping(uint256 => bool)))",
+              "numberOfBytes": "32"
+            },
+            "t_struct(MinerInfo)7_storage": {
+              "label": "struct MiningSession.MinerInfo",
+              "members": [
+                {
+                  "label": "shares",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "0"
+                },
+                {
+                  "label": "rewardsClaimed",
+                  "type": "t_uint256",
+                  "offset": 0,
+                  "slot": "1"
+                }
+              ],
+              "numberOfBytes": "64"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      },
+      "contracts/MockToken.sol:MockToken": {
+        "src": "contracts/MockToken.sol:4",
+        "version": {
+          "withMetadata": "a0f4409847b96c3e8f22d41b1101a41730efa7396581a46e0befbebb1697437a",
+          "withoutMetadata": "ed5a2cceb71502f2ff96f37c6e641a663cc63dda18aee0156a8103d380aba025",
+          "linkedWithoutMetadata": "ed5a2cceb71502f2ff96f37c6e641a663cc63dda18aee0156a8103d380aba025"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "()",
+          "transfer(address,uint256)",
+          "transferFrom(address,address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "MockToken",
+            "src": "contracts/MockToken.sol:12"
+          },
+          {
+            "kind": "state-variable-assignment",
+            "name": "name",
+            "src": "contracts/MockToken.sol:5"
+          },
+          {
+            "kind": "state-variable-assignment",
+            "name": "symbol",
+            "src": "contracts/MockToken.sol:6"
+          },
+          {
+            "kind": "state-variable-assignment",
+            "name": "decimals",
+            "src": "contracts/MockToken.sol:7"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "name",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_string_storage",
+              "contract": "MockToken",
+              "src": "contracts/MockToken.sol:5"
+            },
+            {
+              "label": "symbol",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_string_storage",
+              "contract": "MockToken",
+              "src": "contracts/MockToken.sol:6"
+            },
+            {
+              "label": "decimals",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_uint8",
+              "contract": "MockToken",
+              "src": "contracts/MockToken.sol:7"
+            },
+            {
+              "label": "totalSupply",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_uint256",
+              "contract": "MockToken",
+              "src": "contracts/MockToken.sol:8"
+            },
+            {
+              "label": "balanceOf",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "MockToken",
+              "src": "contracts/MockToken.sol:10"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_mapping(t_address,t_uint256)": {
+              "label": "mapping(address => uint256)",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      },
+      "contracts/RewardToken.sol:RewardToken": {
+        "src": "contracts/RewardToken.sol:4",
+        "version": {
+          "withMetadata": "7d7681fd43c5f97c33601a1732ae3b5fd553846fa47290e9cc1b9f19b48dd1c6",
+          "withoutMetadata": "efdab7137dba6878ce68781e723df7d2f8f2ec42cd3a93872818fe8616f291d7",
+          "linkedWithoutMetadata": "efdab7137dba6878ce68781e723df7d2f8f2ec42cd3a93872818fe8616f291d7"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "()",
+          "setMinter(address)",
+          "transfer(address,uint256)",
+          "approve(address,uint256)",
+          "transferFrom(address,address,uint256)",
+          "mint(address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "RewardToken",
+            "src": "contracts/RewardToken.sol:30"
+          },
+          {
+            "kind": "state-variable-assignment",
+            "name": "name",
+            "src": "contracts/RewardToken.sol:5"
+          },
+          {
+            "kind": "state-variable-assignment",
+            "name": "symbol",
+            "src": "contracts/RewardToken.sol:6"
+          },
+          {
+            "kind": "state-variable-assignment",
+            "name": "decimals",
+            "src": "contracts/RewardToken.sol:7"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "name",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_string_storage",
+              "contract": "RewardToken",
+              "src": "contracts/RewardToken.sol:5"
+            },
+            {
+              "label": "symbol",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_string_storage",
+              "contract": "RewardToken",
+              "src": "contracts/RewardToken.sol:6"
+            },
+            {
+              "label": "decimals",
+              "offset": 0,
+              "slot": "2",
+              "type": "t_uint8",
+              "contract": "RewardToken",
+              "src": "contracts/RewardToken.sol:7"
+            },
+            {
+              "label": "totalSupply",
+              "offset": 0,
+              "slot": "3",
+              "type": "t_uint256",
+              "contract": "RewardToken",
+              "src": "contracts/RewardToken.sol:9"
+            },
+            {
+              "label": "balanceOf",
+              "offset": 0,
+              "slot": "4",
+              "type": "t_mapping(t_address,t_uint256)",
+              "contract": "RewardToken",
+              "src": "contracts/RewardToken.sol:10"
+            },
+            {
+              "label": "allowance",
+              "offset": 0,
+              "slot": "5",
+              "type": "t_mapping(t_address,t_mapping(t_address,t_uint256))",
+              "contract": "RewardToken",
+              "src": "contracts/RewardToken.sol:11"
+            },
+            {
+              "label": "owner",
+              "offset": 0,
+              "slot": "6",
+              "type": "t_address",
+              "contract": "RewardToken",
+              "src": "contracts/RewardToken.sol:13"
+            },
+            {
+              "label": "minter",
+              "offset": 0,
+              "slot": "7",
+              "type": "t_address",
+              "contract": "RewardToken",
+              "src": "contracts/RewardToken.sol:14"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_mapping(t_address,t_mapping(t_address,t_uint256))": {
+              "label": "mapping(address => mapping(address => uint256))",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_address,t_uint256)": {
+              "label": "mapping(address => uint256)",
+              "numberOfBytes": "32"
+            },
+            "t_string_storage": {
+              "label": "string",
+              "numberOfBytes": "32"
+            },
+            "t_uint256": {
+              "label": "uint256",
+              "numberOfBytes": "32"
+            },
+            "t_uint8": {
+              "label": "uint8",
+              "numberOfBytes": "1"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      },
+      "contracts/RewardsVault.sol:IERC20": {
+        "src": "contracts/RewardsVault.sol:4",
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "transfer(address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [],
+          "types": {},
+          "layoutVersion": "1.2",
+          "flat": false,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      },
+      "contracts/RewardsVault.sol:RewardsVault": {
+        "src": "contracts/RewardsVault.sol:8",
+        "version": {
+          "withMetadata": "3b60803332643d8634e68a270042e9bf32e3eed6e3fca4b72582b62b8de73e9f",
+          "withoutMetadata": "7ba835876c2269f6bd1d0b70aaa1c539e955d89e9b04a0aca03d8d2e58fbd30a",
+          "linkedWithoutMetadata": "7ba835876c2269f6bd1d0b70aaa1c539e955d89e9b04a0aca03d8d2e58fbd30a"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "(address)",
+          "distribute(address,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [
+          {
+            "kind": "constructor",
+            "contract": "RewardsVault",
+            "src": "contracts/RewardsVault.sol:12"
+          }
+        ],
+        "layout": {
+          "storage": [
+            {
+              "label": "owner",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_address",
+              "contract": "RewardsVault",
+              "src": "contracts/RewardsVault.sol:9"
+            },
+            {
+              "label": "rewardToken",
+              "offset": 0,
+              "slot": "1",
+              "type": "t_contract(IERC20)802",
+              "contract": "RewardsVault",
+              "src": "contracts/RewardsVault.sol:10"
+            }
+          ],
+          "types": {
+            "t_address": {
+              "label": "address",
+              "numberOfBytes": "20"
+            },
+            "t_contract(IERC20)802": {
+              "label": "contract IERC20",
+              "numberOfBytes": "20"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      },
+      "contracts/WorkVerifier.sol:WorkVerifier": {
+        "src": "contracts/WorkVerifier.sol:4",
+        "version": {
+          "withMetadata": "422b4ee51b8b519667da95951af933644fdba614a722b0af8a19189668f5ff7b",
+          "withoutMetadata": "14f75f94099e56b8bd74f78b16d5516fe06439391eafd4dfa6b783e4864c6cda",
+          "linkedWithoutMetadata": "14f75f94099e56b8bd74f78b16d5516fe06439391eafd4dfa6b783e4864c6cda"
+        },
+        "inherit": [],
+        "libraries": [],
+        "methods": [
+          "verifyWork(bytes32,uint256)"
+        ],
+        "linkReferences": [],
+        "errors": [],
+        "layout": {
+          "storage": [
+            {
+              "label": "usedWork",
+              "offset": 0,
+              "slot": "0",
+              "type": "t_mapping(t_bytes32,t_bool)",
+              "contract": "WorkVerifier",
+              "src": "contracts/WorkVerifier.sol:5"
+            }
+          ],
+          "types": {
+            "t_bool": {
+              "label": "bool",
+              "numberOfBytes": "1"
+            },
+            "t_bytes32": {
+              "label": "bytes32",
+              "numberOfBytes": "32"
+            },
+            "t_mapping(t_bytes32,t_bool)": {
+              "label": "mapping(bytes32 => bool)",
+              "numberOfBytes": "32"
+            }
+          },
+          "layoutVersion": "1.2",
+          "flat": true,
+          "namespaces": {}
+        },
+        "solcVersion": "0.8.24"
+      }
+    }
+  ]
+}

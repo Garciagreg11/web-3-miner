@@ -1,0 +1,196 @@
+{
+  "abi": [
+    {
+      "inputs": [
+        { "internalType": "address", "name": "_vault", "type": "address" },
+        { "internalType": "uint256", "name": "_initialDifficulty", "type": "uint256" },
+        { "internalType": "uint256", "name": "_rewardPerShare", "type": "uint256" }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": false, "internalType": "uint256", "name": "difficulty", "type": "uint256" },
+        { "indexed": false, "internalType": "uint256", "name": "newTarget", "type": "uint256" }
+      ],
+      "name": "DifficultyUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": false, "internalType": "uint256", "name": "epoch", "type": "uint256" },
+        { "indexed": false, "internalType": "uint256", "name": "target", "type": "uint256" },
+        { "indexed": false, "internalType": "uint256", "name": "rewardPerShare", "type": "uint256" }
+      ],
+      "name": "EpochStarted",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": false, "internalType": "uint256", "name": "target", "type": "uint256" },
+        { "indexed": false, "internalType": "uint256", "name": "rewardPerShare", "type": "uint256" }
+      ],
+      "name": "ParamsUpdated",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "address", "name": "miner", "type": "address" },
+        { "indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256" }
+      ],
+      "name": "RewardsClaimed",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        { "indexed": true, "internalType": "address", "name": "miner", "type": "address" },
+        { "indexed": false, "internalType": "uint256", "name": "epoch", "type": "uint256" },
+        { "indexed": false, "internalType": "uint256", "name": "nonce", "type": "uint256" },
+        { "indexed": false, "internalType": "bytes32", "name": "hash", "type": "bytes32" }
+      ],
+      "name": "ShareSubmitted",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "claimRewards",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "currentEpoch",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "difficulty",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "address", "name": "miner", "type": "address" },
+        { "internalType": "uint256", "name": "nonce", "type": "uint256" }
+      ],
+      "name": "epochHash",
+      "outputs": [{ "internalType": "bytes32", "name": "", "type": "bytes32" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "address", "name": "miner", "type": "address" }],
+      "name": "getShares",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "address", "name": "miner", "type": "address" }],
+      "name": "getWork",
+      "outputs": [
+        { "internalType": "uint256", "name": "epoch", "type": "uint256" },
+        { "internalType": "uint256", "name": "difficultyOut", "type": "uint256" },
+        { "internalType": "uint256", "name": "targetOut", "type": "uint256" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+      "name": "miners",
+      "outputs": [
+        { "internalType": "uint256", "name": "shares", "type": "uint256" },
+        { "internalType": "uint256", "name": "rewardsClaimed", "type": "uint256" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "owner",
+      "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "address", "name": "minerAddr", "type": "address" }],
+      "name": "pendingRewards",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "rewardPerShare",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "uint256", "name": "_difficulty", "type": "uint256" }],
+      "name": "setDifficulty",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "uint256", "name": "_rewardPerShare", "type": "uint256" }],
+      "name": "startNewEpoch",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "uint256", "name": "nonce", "type": "uint256" }],
+      "name": "submitShare",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "target",
+      "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [{ "internalType": "uint256", "name": "_rewardPerShare", "type": "uint256" }],
+      "name": "updateParams",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        { "internalType": "uint256", "name": "", "type": "uint256" },
+        { "internalType": "address", "name": "", "type": "address" },
+        { "internalType": "uint256", "name": "", "type": "uint256" }
+      ],
+      "name": "usedNonce",
+      "outputs": [{ "internalType": "bool", "name": "", "type": "bool" }],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "vault",
+      "outputs": [
+        { "internalType": "contract RewardsVault", "name": "", "type": "address" }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ]
+}
