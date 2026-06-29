@@ -62,7 +62,6 @@ export default function MiningPanel({
     }
   }, [claimRewards]);
 
-  // Format pending rewards for display safely
   const pendingDisplay =
     pendingRewards && pendingRewards > 0n
       ? (Number(pendingRewards) / 1e18).toFixed(6)
@@ -79,6 +78,7 @@ export default function MiningPanel({
         display: "flex",
         justifyContent: "center",
         alignItems: "center",
+        width: "100%"
       }}
     >
       <div
@@ -94,7 +94,6 @@ export default function MiningPanel({
           overflow: "hidden",
         }}
       >
-        {/* Glow accent */}
         <div
           style={{
             position: "absolute",
@@ -106,15 +105,7 @@ export default function MiningPanel({
         />
 
         {/* Header */}
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
+        <div style={{ position: "relative", display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
           <div>
             <div style={{ fontSize: "13px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#6b7280" }}>
               HASHVAULT
@@ -158,20 +149,13 @@ export default function MiningPanel({
           </div>
         </div>
 
-        {/* Layout */}
-        <div
-          style={{
-            position: "relative",
-            display: "grid",
-            gridTemplateColumns: "gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)'",
-            gap: "20px",
-          }}
-        >
-          {/* Left: 3D core + controls */}
+        {/* Layout Split */}
+        <div style={{ position: "relative", display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: "20px" }}>
+          {/* Left Panel */}
           <div
             style={{
               borderRadius: "16px",
-              border: "1px solid rgba(148,163,184,0.4)",
+              border: "1px solid rgba(148, 163, 184, 0.4)",
               background: "radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(15,23,42,0.7))",
               padding: "16px 16px 18px",
               display: "flex",
@@ -179,21 +163,12 @@ export default function MiningPanel({
               gap: "14px",
             }}
           >
-            <div style={{ display: "flex", justifyBetween: "space-between", alignItems: "center", marginBottom: "4px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ fontSize: "13px", color: "#9ca3af" }}>GPU Reactor Core</div>
-              <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.12em" }}>
-                Real‑time Visualizer
-              </div>
+              <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase" }}>Real‑time Visualizer</div>
             </div>
 
-            <div
-              style={{
-                borderRadius: "14px",
-                overflow: "hidden",
-                border: "1px solid rgba(148,163,184,0.35)",
-                background: "radial-gradient(circle at 50% 0, rgba(15,23,42,0.9), rgba(15,23,42,0.95))",
-              }}
-            >
+            <div style={{ borderRadius: "14px", overflow: "hidden", border: "1px solid rgba(148,163,184,0.35)" }}>
               <GPUCore />
             </div>
 
@@ -201,19 +176,15 @@ export default function MiningPanel({
               <div style={{ fontSize: "12px", color: "#9ca3af" }}>
                 <div>
                   <span style={{ color: "#6b7280" }}>Difficulty: </span>
-                  <span style={{ fontFamily: "monospace" }}>
-                    {lastDifficulty !== null ? lastDifficulty.toString() : "Click Start to Fetch"}
-                  </span>
+                  <span style={{ fontFamily: "monospace" }}>{lastDifficulty !== null ? lastDifficulty : "—"}</span>
                 </div>
                 <div style={{ marginTop: "4px" }}>
                   <span style={{ color: "#6b7280" }}>Last Nonce: </span>
-                  <span style={{ fontFamily: "monospace" }}>
-                    {lastNonce !== null ? lastNonce.toString() : "—"}
-                  </span>
+                  <span style={{ fontFamily: "monospace" }}>{lastNonce !== null ? lastNonce : "—"}</span>
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: "10px" }}>
+              <div>
                 {!isConnected ? (
                   <button
                     onClick={handleConnect}
@@ -238,16 +209,12 @@ export default function MiningPanel({
                     style={{
                       padding: "9px 18px",
                       borderRadius: "999px",
-                      border: isMining ? "1px solid rgba(248,113,113,0.7)" : "1px solid rgba(59,130,246,0.8)",
-                      background: isMining
-                        ? "linear-gradient(135deg, #7f1d1d, #b91c1c, #7f1d1d)"
-                        : "linear-gradient(135deg, #1d4ed8, #3b82f6, #1d4ed8)",
+                      border: isMining ? "1px solid #f87171" : "1px solid #3b82f6",
+                      background: isMining ? "#b91c1c" : "#3b82f6",
                       color: "white",
                       fontSize: "12px",
                       fontWeight: 600,
                       cursor: "pointer",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.12em",
                     }}
                   >
                     {isMining ? "Mining..." : "Start Mining"}
@@ -257,7 +224,7 @@ export default function MiningPanel({
             </div>
           </div>
 
-          {/* Right: stats + rewards */}
+          {/* Right Panel */}
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div
               style={{
@@ -268,19 +235,16 @@ export default function MiningPanel({
                 boxShadow: "0 0 25px rgba(34,197,94,0.35)",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: "13px", color: "#bbf7d0", textTransform: "uppercase", letterSpacing: "0.16em" }}>
-                    Pending Rewards {loadingRewards && "…"}
-                  </div>
+                  <div style={{ fontSize: "13px", color: "#bbf7d0", textTransform: "uppercase" }}>Pending Rewards</div>
                   <div style={{ fontSize: "22px", fontWeight: 700, color: "#ecfdf5", marginTop: "4px" }}>
-                    {pendingDisplay}{" "}
-                    <span style={{ fontSize: "11px", fontWeight: 500, color: "#bbf7d0" }}>HVLT</span>
+                    {pendingDisplay} <span style={{ fontSize: "11px", color: "#bbf7d0" }}>HVLT</span>
                   </div>
                 </div>
                 <button
                   onClick={handleClaim}
-                  disabled={!isConnected || pendingRewards === null || pendingRewards === 0n}
+                  disabled={!isConnected || pendingRewards === 0n}
                   style={{
                     padding: "8px 16px",
                     borderRadius: "999px",
@@ -289,10 +253,7 @@ export default function MiningPanel({
                     color: "#ecfdf5",
                     fontSize: "11px",
                     fontWeight: 600,
-                    cursor: (!isConnected || pendingRewards === 0n) ? "not-allowed" : "pointer",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.14em",
-                    opacity: (!isConnected || pendingRewards === 0n) ? 0.5 : 1,
+                    cursor: "pointer",
                   }}
                 >
                   Claim
@@ -300,20 +261,9 @@ export default function MiningPanel({
               </div>
             </div>
 
-            {/* Error Log Panel */}
             {error && (
-              <div
-                style={{
-                  padding: "12px",
-                  borderRadius: "12px",
-                  background: "rgba(239,68,68,0.15)",
-                  border: "1px solid rgba(239,68,68,0.4)",
-                  color: "#fca5a5",
-                  fontFamily: "monospace",
-                  fontSize: "12px",
-                }}
-              >
-                <strong>Error Log:</strong> {error}
+              <div style={{ padding: "12px", borderRadius: "12px", background: "rgba(239,68,68,0.15)", color: "#fca5a5", fontSize: "12px" }}>
+                {error}
               </div>
             )}
           </div>
