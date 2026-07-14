@@ -1,116 +1,79 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { useAccount, useConnect } from 'wagmi'
-import { ethers } from 'ethers'
+import React from 'react'
+import { useAccount, useConnect, useReadContract, useWriteContract } from 'wagmi'
 import MiningPanel from './components/MiningPanel'
 
-declare global {
-  interface Window {
-    ethereum?: any
-  }
-}
+import miningSessionAbi from "./abi/MiningSession.json"
+import { MINING_SESSION } from "./addresses"
 
-const MINING_SESSION_ADDRESS = import.meta.env.NEXT_PUBLIC_MINING_SESSION
-
-const MINING_SESSION_ABI: any[] = [
-  {
-    "inputs": [
-      { "internalType": "address", "name": "_vault", "type": "address" },
-      { "internalType": "address", "name": "_devWallet", "type": "address" },
-      { "internalType": "uint256", "name": "_initialDifficulty", "type": "uint256" },
-      { "internalType": "uint256", "name": "_rewardPerShare", "type": "uint256" }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "epoch", "type": "uint256" }],
-    "name": "claimRewards",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "currentEpoch",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getDifficulty",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [{ "internalType": "uint256", "name": "nonce", "type": "uint256" }],
-    "name": "submitShare",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  }
-]
-
-export function App() {
+export default function App() {
   const { isConnected, address } = useAccount()
   const { connect, connectors, error } = useConnect()
 
-  const [signer, setSigner] = useState<any>(null)
-  const [miningSession, setMiningSession] = useState<any>(null)
-  const [isInitializing, setIsInitializing] = useState<boolean>(false)
+  // ---------------- READ CONTRACT DATA ----------------
 
-  useEffect(() => {
-    let mounted = true
+  const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
+    address: MINING_SESSION,
+    abi: miningSessionAbi,
+    functionName: "getWork",
+  })
 
-    async function init() {
-      if (!window.ethereum || !isConnected || !address) {
-        if (mounted) {
-          setSigner(null)
-          setMiningSession(null)
-        }
-        return
-      }
+  // Debug logs safely tracking state outside of hook configuration option limits
+  console.log("DEBUG - Current Contract Address being called:", MINING_SESSION)
+  console.log("DEBUG - Contract Work Data:", work)
+  if (workError) {
+    console.error("DEBUG - Contract Work Hook Error Details:", workError)
+  }
 
-      try {
-        setIsInitializing(true)
+  const { data: shares } = useReadContract({
+    address: MINING_SESSION,
+    abi: miningSessionAbi,
+    functionName: "getShares",
+    args: work && address ? [work[0], address] : undefined,
+    query: { enabled: !!work && !!address }
+  })
 
-        const provider = new ethers.BrowserProvider(window.ethereum)
-        const signer = await provider.getSigner()
+  const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
+    address: MINING_SESSION,
+    abi: miningSessionAbi,
+    functionName: "pendingRewards",
+    args: work && address ? [work[0], address] : undefined,
+    query: { enabled: !!work && !!address }
+  })
 
-        const contract = new ethers.Contract(
-          MINING_SESSION_ADDRESS,
-          MINING_SESSION_ABI,
-          signer
-        )
+  // ---------------- WRITE CONTRACT CALLS ----------------
 
-        if (mounted) {
-          setSigner(signer)
-          setMiningSession(contract)
-        }
-      } catch (err) {
-        console.error('Ethers initialization failed:', err)
-      } finally {
-        if (mounted) setIsInitializing(false)
-      }
-    }
+  const { writeContractAsync } = useWriteContract()
 
-    init()
-    return () => { mounted = false }
-  }, [isConnected, address])
-
-  const handleClaimRewards = async () => {
-    if (!miningSession) return
+  async function submitShare(nonce: bigint) {
     try {
-      const epoch = await miningSession.currentEpoch()
-      const tx = await miningSession.claimRewards(epoch)
-      await tx.wait()
+      await writeContractAsync({
+        address: MINING_SESSION,
+        abi: miningSessionAbi,
+        functionName: "submitShare",
+        args: [nonce],
+      })
     } catch (err) {
-      console.error("Reward claim error:", err)
+      console.error("Submit share error:", err)
     }
   }
+
+  async function claimRewards() {
+    try {
+      if (!work) return
+      await writeContractAsync({
+        address: MINING_SESSION,
+        abi: miningSessionAbi,
+        functionName: "claimRewards",
+        args: [work[0]],
+      })
+    } catch (err) {
+      console.error("Claim error:", err)
+    }
+  }
+
+  // ---------------- UI STATES ----------------
 
   if (!isConnected) {
     return (
@@ -134,7 +97,8 @@ export function App() {
               onClick={() => connect({ connector })}
               style={{
                 padding: '14px', background: '#00ffcc', color: '#000',
-                borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'
+                borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer',
+                width: '100%', marginBottom: '10px', border: 'none'
               }}
             >
               Connect with {connector.name}
@@ -151,7 +115,8 @@ export function App() {
     )
   }
 
-  if (isInitializing || !miningSession || !signer) {
+  // Guard against missing data or empty arrays to stop downstream thread loop crashes
+  if (loadingWork || !work || work.length === 0) {
     return (
       <div style={{
         backgroundColor: '#0a0a0c', color: '#fff', minHeight: '100vh',
@@ -164,13 +129,19 @@ export function App() {
     )
   }
 
+  // ---------------- RENDER MINING PANEL ----------------
+  // Explicitly cast all native BigInt fields into strings right here at the border. 
+  // This completely stops downstream runtime rendering errors inside your React JSX elements.
   return (
     <MiningPanel
-      miningSession={miningSession}
-      signer={signer}
-      pendingRewards={0n}
-      loadingRewards={false}
-      claimRewards={handleClaimRewards}
+      epoch={work[0]?.toString()}
+      difficulty="4"
+      target="0x0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      shares={shares ? shares.toString() : "0"}
+      pendingRewards={pendingRewards ? pendingRewards.toString() : "0"}
+      loadingRewards={loadingRewards}
+      submitShare={submitShare}
+      claimRewards={claimRewards}
     />
   )
 }
