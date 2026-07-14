@@ -1,323 +1,259 @@
-import React, { useState, useCallback } from "react";
-import { useAccount, useConnect } from "wagmi";
-import { injected } from "wagmi/connectors";
-import { mine } from "../utils/miner";
-import GPUCore from "./GPUCore";
+import React, { useState, useEffect, useRef } from 'react';
+import { useAccount, useWriteContract } from 'wagmi';
+
+// ==========================================
+// CONFIGURATION & CONTRACT DETAILS
+// ==========================================
+// Your greggarcia72 Creator Coin / Miner Contract Address
+const MINER_CONTRACT_ADDRESS = '0x0d500B1d29Eae3C1C2caA262E00b39d12DB4f99E';
+
+const MINER_ABI = [
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "nonce",
+        "type": "uint256"
+      }
+    ],
+    "name": "submitShare", // Matches contract name for submitting hashes
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "claimRewards", // Matches contract name for pulling pending balances
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+] as const;
+
+interface MiningPanelProps {
+  epoch: string | undefined;
+  difficulty: string | undefined;
+  target: string | undefined;
+  shares: string;
+  pendingRewards: string;
+  loadingRewards: boolean;
+}
 
 export default function MiningPanel({
-  miningSession,
-  signer,
+  epoch,
+  difficulty,
+  target,
+  shares,
   pendingRewards,
   loadingRewards,
-  claimRewards,
-}) {
-  const { connect, isPending } = useConnect();
-  const { address, isConnected } = useAccount();
+}: MiningPanelProps) {
+  const { address } = useAccount();
+  const { writeContractAsync } = useWriteContract();
 
   const [isMining, setIsMining] = useState(false);
-  const [lastNonce, setLastNonce] = useState(null);
-  const [lastDifficulty, setLastDifficulty] = useState(null);
-  const [error, setError] = useState(null);
+  const [hashrate, setHashrate] = useState(0);
+  const [totalHashes, setTotalHashes] = useState(0);
+  const workerRef = useRef<Worker | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [isClaiming, setIsClaiming] = useState(false);
 
-  const handleConnect = () => {
-    setError(null);
-    connect({ connector: injected() });
-  };
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) workerRef.current.terminate();
+    };
+  }, []);
 
-  const startMining = useCallback(async () => {
-    if (!miningSession || !signer || !address) {
-      setError("Wallet not connected or mining session unavailable");
+  // 1. Core Mining Engine Loop Configuration
+  const startMining = () => {
+    if (!address) {
+      setError("Please connect your wallet first.");
       return;
     }
+    setError(null);
+
+    workerRef.current = new Worker(
+      new URL('../mining-worker.js', import.meta.url),
+      { type: 'module' }
+    );
+
+    workerRef.current.onmessage = async (e) => {
+      const { status, hashrate: currentHashrate, totalHashes: runHashes, nonce } = e.data;
+
+      if (status === 'PROGRESS') {
+        setHashrate(currentHashrate);
+        setTotalHashes(runHashes);
+      } else if (status === 'SHARE_FOUND') {
+        stopMining(); // Pause worker loop while sending blockchain transaction
+
+        try {
+          console.log(`✨ Valid nonce found: ${nonce}. Submitting share on-chain...`);
+          const tx = await writeContractAsync({
+            address: MINER_CONTRACT_ADDRESS,
+            abi: MINER_ABI,
+            functionName: 'submitShare',
+            args: [BigInt(nonce)],
+          });
+          console.log("Share submitted successfully! Tx Hash:", tx);
+
+          // Auto-resume mining after transaction is pushed
+          startMining();
+        } catch (err: any) {
+          setError(err?.message || "Failed to submit discovered share to the network.");
+        }
+      }
+    };
+
+    workerRef.current.postMessage({
+      cmd: 'START',
+      target: target || "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      challenge: epoch || "0x0000000000000000000000000000000000000000000000000000000000000001",
+      userAddress: address
+    });
 
     setIsMining(true);
+  };
+
+  const stopMining = () => {
+    if (workerRef.current) {
+      workerRef.current.postMessage({ cmd: 'STOP' });
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
+    setIsMining(false);
+    setHashrate(0);
+  };
+
+  // 2. Claim Rewards Interaction
+  const handleClaimRewards = async () => {
+    if (!address) return;
     setError(null);
+    setIsClaiming(true);
 
     try {
-      const sessionWithSigner = miningSession.connect(signer);
-      const difficultyBN = await sessionWithSigner.getDifficulty();
-      const difficultyNum = parseInt(difficultyBN.toString());
-      setLastDifficulty(difficultyNum);
-
-      const { nonce } = mine(difficultyNum, address);
-      setLastNonce(nonce);
-
-      const tx = await sessionWithSigner.submitShare(nonce);
-      await tx.wait();
-    } catch (e) {
-      console.error("Mining error:", e);
-      setError(e?.message || "Mining failed");
+      const tx = await writeContractAsync({
+        address: MINER_CONTRACT_ADDRESS,
+        abi: MINER_ABI,
+        functionName: 'claimRewards',
+      });
+      console.log("Claim transaction submitted successfully! Tx Hash:", tx);
+    } catch (err: any) {
+      setError(err?.message || "Blockchain transaction failed while claiming rewards.");
     } finally {
-      setIsMining(false);
+      setIsClaiming(false);
     }
-  }, [miningSession, signer, address]);
+  };
 
-  const handleClaim = useCallback(async () => {
-    setError(null);
-    try {
-      await claimRewards();
-    } catch (e) {
-      console.error("Claim error:", e);
-      setError(e?.message || "Failed to claim rewards");
-    }
-  }, [claimRewards]);
-
-  // Format pending rewards for display safely
-  const pendingDisplay =
-    pendingRewards && pendingRewards > 0n
-      ? (Number(pendingRewards) / 1e18).toFixed(6)
-      : "0.000000";
+  const formattedRewards = pendingRewards !== "0"
+    ? (Number(pendingRewards) / 1e18).toFixed(6)
+    : "0.000000";
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        padding: "32px",
-        background: "radial-gradient(circle at top, #0f172a 0, #020617 45%, #000 100%)",
-        color: "#e5e7eb",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1100px",
-          borderRadius: "18px",
-          border: "1px solid rgba(148, 163, 184, 0.4)",
-          background: "linear-gradient(135deg, rgba(15,23,42,0.95), rgba(15,23,42,0.7))",
-          boxShadow: "0 0 40px rgba(56,189,248,0.25), 0 0 80px rgba(59,130,246,0.35)",
-          padding: "24px 28px 28px",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        {/* Glow accent */}
-        <div
-          style={{
-            position: "absolute",
-            inset: "-40%",
-            background: "radial-gradient(circle at 10% 0, rgba(56,189,248,0.18), transparent 55%), radial-gradient(circle at 90% 100%, rgba(34,197,94,0.18), transparent 55%)",
-            opacity: 0.9,
-            pointerEvents: "none",
-          }}
-        />
+    <div style={{
+      minHeight: '100vh', backgroundColor: '#0a0a0c', color: '#fff',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+    }}>
+      <div style={{
+        background: '#131316', border: '1px solid #222', borderRadius: '16px',
+        width: '100%', maxWidth: '600px', padding: '30px', boxSizing: 'border-box'
+      }}>
 
-        {/* Header */}
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "20px",
-          }}
-        >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
           <div>
-            <div style={{ fontSize: "13px", letterSpacing: "0.18em", textTransform: "uppercase", color: "#6b7280" }}>
-              HASHVAULT
-            </div>
-            <h1 style={{ fontSize: "26px", fontWeight: 700, marginTop: "4px", color: "#e5e7eb" }}>
-              GPU Mining Control Center
-            </h1>
+            <h2 style={{ margin: 0, fontSize: '22px' }}>GPU Hashing Node</h2>
+            <p style={{ color: '#666', margin: '4px 0 0 0', fontSize: '13px' }}>Epoch Stage: {epoch || '0'}</p>
           </div>
-
-          <div style={{ textAlign: "right", fontSize: "12px", color: "#9ca3af" }}>
-            <div
-              style={{
-                padding: "4px 10px",
-                borderRadius: "999px",
-                border: "1px solid rgba(148,163,184,0.5)",
-                background: "linear-gradient(135deg, rgba(15,23,42,0.9), rgba(15,23,42,0.6))",
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-              }}
-            >
-              <span
-                style={{
-                  width: "8px",
-                  height: "8px",
-                  borderRadius: "999px",
-                  background: isMining ? "#22c55e" : "#ef4444",
-                  boxShadow: isMining ? "0 0 10px rgba(34,197,94,0.8)" : "0 0 10px rgba(239,68,68,0.8)",
-                }}
-              />
-              <span style={{ fontSize: "11px", textTransform: "uppercase" }}>
-                {isMining ? "Mining Active" : "Idle"}
-              </span>
-            </div>
-            <div style={{ marginTop: "6px" }}>
-              <span style={{ color: "#6b7280" }}>Wallet: </span>
-              <span style={{ fontFamily: "monospace", fontSize: "11px" }}>
-                {address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Not connected"}
-              </span>
-            </div>
+          <div style={{
+            background: isMining ? 'rgba(0, 255, 204, 0.1)' : 'rgba(255, 68, 68, 0.1)',
+            color: isMining ? '#00ffcc' : '#ff4444',
+            padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold'
+          }}>
+            {isMining ? '● RUNNING' : '○ IDLE'}
           </div>
         </div>
 
-        {/* Layout */}
-        <div
-          style={{
-            position: "relative",
-            display: "grid",
-            gridTemplateColumns: "gridTemplateColumns: 'minmax(0, 1.4fr) minmax(0, 1fr)'",
-            gap: "20px",
-          }}
-        >
-          {/* Left: 3D core + controls */}
-          <div
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+          <div style={{ background: '#1c1c21', padding: '15px', borderRadius: '8px' }}>
+            <div style={{ color: '#666', fontSize: '11px', marginBottom: '5px' }}>DIFFICULTY</div>
+            <div style={{ fontFamily: 'monospace', fontSize: '16px' }}>{difficulty || '16'}</div>
+          </div>
+          <div style={{ background: '#1c1c21', padding: '15px', borderRadius: '8px' }}>
+            <div style={{ color: '#666', fontSize: '11px', marginBottom: '5px' }}>ACCEPTED SHARES</div>
+            <div style={{ fontFamily: 'monospace', fontSize: '16px' }}>{shares}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '20px' }}>
+          <div style={{ background: '#1c1c21', padding: '15px', borderRadius: '8px' }}>
+            <div style={{ color: '#666', fontSize: '11px', marginBottom: '5px' }}>HASHRATE</div>
+            <div style={{ fontFamily: 'monospace', fontSize: '16px', color: '#00ffcc' }}>
+              {hashrate > 1000000 ? `${(hashrate / 1000000).toFixed(2)} MH/s` : `${(hashrate / 1000).toFixed(2)} KH/s`}
+            </div>
+          </div>
+          <div style={{ background: '#1c1c21', padding: '15px', borderRadius: '8px' }}>
+            <div style={{ color: '#666', fontSize: '11px', marginBottom: '5px' }}>RUN HASHES</div>
+            <div style={{ fontFamily: 'monospace', fontSize: '16px' }}>{totalHashes.toLocaleString()}</div>
+          </div>
+        </div>
+
+        <div style={{
+          background: 'linear-gradient(135deg, #16222f 0%, #131316 100%)',
+          border: '1px solid #1e293b', padding: '20px', borderRadius: '8px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px'
+        }}>
+          <div>
+            <div style={{ color: '#94a3b8', fontSize: '12px' }}>PENDING BALANCE {loadingRewards && '...'}</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '5px', color: '#f8fafc' }}>
+              {formattedRewards} <span style={{ fontSize: '14px', color: '#64748b' }}>HVLT</span>
+            </div>
+          </div>
+          <button
+            onClick={handleClaimRewards}
+            disabled={pendingRewards === "0" || isClaiming}
             style={{
-              borderRadius: "16px",
-              border: "1px solid rgba(148,163,184,0.4)",
-              background: "radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(15,23,42,0.7))",
-              padding: "16px 16px 18px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "14px",
+              padding: '10px 20px', background: '#ffffff', color: '#000',
+              border: 'none', borderRadius: '6px', fontWeight: 'bold',
+              cursor: (pendingRewards === "0" || isClaiming) ? 'not-allowed' : 'pointer',
+              opacity: (pendingRewards === "0" || isClaiming) ? 0.4 : 1
             }}
           >
-            <div style={{ display: "flex", justifyBetween: "space-between", alignItems: "center", marginBottom: "4px" }}>
-              <div style={{ fontSize: "13px", color: "#9ca3af" }}>GPU Reactor Core</div>
-              <div style={{ fontSize: "11px", color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.12em" }}>
-                Real‑time Visualizer
-              </div>
-            </div>
-
-            <div
-              style={{
-                borderRadius: "14px",
-                overflow: "hidden",
-                border: "1px solid rgba(148,163,184,0.35)",
-                background: "radial-gradient(circle at 50% 0, rgba(15,23,42,0.9), rgba(15,23,42,0.95))",
-              }}
-            >
-              <GPUCore />
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "6px" }}>
-              <div style={{ fontSize: "12px", color: "#9ca3af" }}>
-                <div>
-                  <span style={{ color: "#6b7280" }}>Difficulty: </span>
-                  <span style={{ fontFamily: "monospace" }}>
-                    {lastDifficulty !== null ? lastDifficulty.toString() : "Click Start to Fetch"}
-                  </span>
-                </div>
-                <div style={{ marginTop: "4px" }}>
-                  <span style={{ color: "#6b7280" }}>Last Nonce: </span>
-                  <span style={{ fontFamily: "monospace" }}>
-                    {lastNonce !== null ? lastNonce.toString() : "—"}
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px" }}>
-                {!isConnected ? (
-                  <button
-                    onClick={handleConnect}
-                    disabled={isPending}
-                    style={{
-                      padding: "9px 18px",
-                      borderRadius: "999px",
-                      border: "1px solid #00ffcc",
-                      background: "linear-gradient(135deg, #047857, #10b981)",
-                      color: "black",
-                      fontSize: "12px",
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {isPending ? "Connecting..." : "Connect Wallet"}
-                  </button>
-                ) : (
-                  <button
-                    onClick={startMining}
-                    disabled={isMining}
-                    style={{
-                      padding: "9px 18px",
-                      borderRadius: "999px",
-                      border: isMining ? "1px solid rgba(248,113,113,0.7)" : "1px solid rgba(59,130,246,0.8)",
-                      background: isMining
-                        ? "linear-gradient(135deg, #7f1d1d, #b91c1c, #7f1d1d)"
-                        : "linear-gradient(135deg, #1d4ed8, #3b82f6, #1d4ed8)",
-                      color: "white",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.12em",
-                    }}
-                  >
-                    {isMining ? "Mining..." : "Start Mining"}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Right: stats + rewards */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div
-              style={{
-                borderRadius: "16px",
-                border: "1px solid rgba(52,211,153,0.5)",
-                background: "linear-gradient(145deg, rgba(6,78,59,0.9), rgba(5,46,22,0.9))",
-                padding: "14px 16px 16px",
-                boxShadow: "0 0 25px rgba(34,197,94,0.35)",
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-                <div>
-                  <div style={{ fontSize: "13px", color: "#bbf7d0", textTransform: "uppercase", letterSpacing: "0.16em" }}>
-                    Pending Rewards {loadingRewards && "…"}
-                  </div>
-                  <div style={{ fontSize: "22px", fontWeight: 700, color: "#ecfdf5", marginTop: "4px" }}>
-                    {pendingDisplay}{" "}
-                    <span style={{ fontSize: "11px", fontWeight: 500, color: "#bbf7d0" }}>HVLT</span>
-                  </div>
-                </div>
-                <button
-                  onClick={handleClaim}
-                  disabled={!isConnected || pendingRewards === null || pendingRewards === 0n}
-                  style={{
-                    padding: "8px 16px",
-                    borderRadius: "999px",
-                    border: "1px solid rgba(187,247,208,0.9)",
-                    background: "rgba(22,101,52,0.6)",
-                    color: "#ecfdf5",
-                    fontSize: "11px",
-                    fontWeight: 600,
-                    cursor: (!isConnected || pendingRewards === 0n) ? "not-allowed" : "pointer",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.14em",
-                    opacity: (!isConnected || pendingRewards === 0n) ? 0.5 : 1,
-                  }}
-                >
-                  Claim
-                </button>
-              </div>
-            </div>
-
-            {/* Error Log Panel */}
-            {error && (
-              <div
-                style={{
-                  padding: "12px",
-                  borderRadius: "12px",
-                  background: "rgba(239,68,68,0.15)",
-                  border: "1px solid rgba(239,68,68,0.4)",
-                  color: "#fca5a5",
-                  fontFamily: "monospace",
-                  fontSize: "12px",
-                }}
-              >
-                <strong>Error Log:</strong> {error}
-              </div>
-            )}
-          </div>
+            {isClaiming ? 'Claiming...' : 'Claim'}
+          </button>
         </div>
+
+        {error && (
+          <div style={{
+            background: 'rgba(255,68,68,0.1)', border: '1px solid #ff4444',
+            color: '#ff4444', padding: '12px', borderRadius: '6px',
+            fontSize: '13px', fontFamily: 'monospace', marginBottom: '20px'
+          }}>
+            {error}
+          </div>
+        )}
+
+        {isMining ? (
+          <button
+            onClick={stopMining}
+            style={{
+              padding: '14px', background: 'transparent', color: '#ff4444',
+              border: '1px solid #ff4444', borderRadius: '8px', fontWeight: 'bold',
+              cursor: 'pointer', width: '100%'
+            }}
+          >
+            STOP ENGINE WORKER
+          </button>
+        ) : (
+          <button
+            onClick={startMining}
+            style={{
+              padding: '14px', background: '#00ffcc', color: '#000',
+              border: 'none', borderRadius: '8px', fontWeight: 'bold',
+              cursor: 'pointer', width: '100%'
+            }}
+          >
+            ENGAGE HASHING THREADS
+          </button>
+        )}
+
       </div>
     </div>
   );
