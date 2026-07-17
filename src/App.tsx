@@ -7,16 +7,37 @@ import MiningPanel from './components/MiningPanel'
 import miningSessionAbi from "./abi/MiningSession.json"
 import { MINING_SESSION } from "./addresses"
 
+// 1. Properly process the ABI as a flat array at the file level
+const abiArray = Array.isArray(miningSessionAbi)
+  ? miningSessionAbi
+  : (miningSessionAbi as any).default || [];
+
+// 2. Silence noisy WebSocket warnings
+if (typeof window !== 'undefined') {
+  const originalWarn = console.warn;
+  console.warn = (...args) => {
+    if (
+      args[0] && 
+      typeof args[0] === 'string' && 
+      (args[0].includes('WebSocket') || args[0].includes('close()'))
+    ) {
+      return; 
+    }
+    originalWarn(...args);
+  };
+}
+
 export default function App() {
   const { isConnected, address } = useAccount()
   const { connect, connectors, error } = useConnect()
 
   // ---------------- READ CONTRACT DATA ----------------
 
+  // Changed abi to abiArray and functionName to getMiningChallenge
   const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
     address: MINING_SESSION,
-    abi: miningSessionAbi,
-    functionName: "getWork",
+    abi: abiArray,
+    functionName: "getMiningChallenge",
   })
 
   // Debug logs safely tracking state outside of hook configuration option limits
@@ -26,19 +47,23 @@ export default function App() {
     console.error("DEBUG - Contract Work Hook Error Details:", workError)
   }
 
+  // Safe fallback values to prevent Ethers/Viem from crashing during initial undefined renders
+  const safeEpoch = work && work[0] ? work[0] : "0x0000000000000000000000000000000000000000000000000000000000000000"
+  const safeAddress = address || "0x0000000000000000000000000000000000000000"
+
   const { data: shares } = useReadContract({
     address: MINING_SESSION,
-    abi: miningSessionAbi,
+    abi: abiArray,
     functionName: "getShares",
-    args: work && address ? [work[0], address] : undefined,
+    args: [safeEpoch, safeAddress],
     query: { enabled: !!work && !!address }
   })
 
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
     address: MINING_SESSION,
-    abi: miningSessionAbi,
+    abi: abiArray,
     functionName: "pendingRewards",
-    args: work && address ? [work[0], address] : undefined,
+    args: [safeEpoch, safeAddress],
     query: { enabled: !!work && !!address }
   })
 
@@ -50,7 +75,7 @@ export default function App() {
     try {
       await writeContractAsync({
         address: MINING_SESSION,
-        abi: miningSessionAbi,
+        abi: abiArray,
         functionName: "submitShare",
         args: [nonce],
       })
@@ -64,7 +89,7 @@ export default function App() {
       if (!work) return
       await writeContractAsync({
         address: MINING_SESSION,
-        abi: miningSessionAbi,
+        abi: abiArray,
         functionName: "claimRewards",
         args: [work[0]],
       })
@@ -130,8 +155,6 @@ export default function App() {
   }
 
   // ---------------- RENDER MINING PANEL ----------------
-  // Explicitly cast all native BigInt fields into strings right here at the border. 
-  // This completely stops downstream runtime rendering errors inside your React JSX elements.
   return (
     <MiningPanel
       epoch={work[0]?.toString()}
