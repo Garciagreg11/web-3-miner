@@ -33,12 +33,13 @@ export default function App() {
 
   // ---------------- READ CONTRACT DATA ----------------
 
-  // Changed abi to abiArray and functionName to getMiningChallenge
-  const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
-    address: MINING_SESSION,
-    abi: abiArray,
-    functionName: "getMiningChallenge",
-  })
+  // Changed abi to abiArray and functionName to getWork
+const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
+  address: MINING_SESSION,
+  abi: abiArray,
+  functionName: "getWork",
+})
+  
 
   // Debug logs safely tracking state outside of hook configuration option limits
   console.log("DEBUG - Current Contract Address being called:", MINING_SESSION)
