@@ -89,7 +89,7 @@ export default function App() {
         address: MINING_SESSION,
         abi: abiArray,
         functionName: "claimRewards",
-        args: [], // Fixed: claimRewards takes 0 parameters in your contract
+        args: [], // claimRewards takes 0 parameters in your contract
       })
     } catch (err) {
       console.error("Claim error:", err)
@@ -146,11 +146,26 @@ export default function App() {
     return (
       <div style={{
         backgroundColor: '#0a0a0c', color: '#fff', minHeight: '100vh',
-        display: 'flex', alignItems: 'center', justifyContent: 'center'
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
       }}>
-        <p style={{ color: '#00ffcc', fontSize: '18px', fontWeight: 'bold' }}>
+        <p style={{ color: '#00ffcc', fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
           Initializing Mining Session...
         </p>
+        
+        {workError && (
+          <div style={{
+            marginTop: '20px', padding: '15px', background: '#221111', 
+            border: '1px solid #ff4444', borderRadius: '8px', maxWidth: '90%', width: '400px'
+          }}>
+            <p style={{ color: '#ff4444', fontWeight: 'bold', margin: '0 0 5px 0' }}>Connection Error:</p>
+            <p style={{ color: '#aaa', fontSize: '13px', margin: 0, fontFamily: 'monospace', wordBreak: 'break-all' }}>
+              {workError.message || String(workError)}
+            </p>
+            <p style={{ color: '#00ffcc', fontSize: '12px', marginTop: '10px', margin: '10px 0 0 0' }}>
+              💡 Hint: Make sure your connected wallet is switched to **Base Mainnet**.
+            </p>
+          </div>
+        )}
       </div>
     )
   }
