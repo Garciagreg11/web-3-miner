@@ -1,1 +1,21 @@
 node_modules/
+
+# Dependencies
+node_modules/
+.vite/
+
+# Next.js build output & cache
+.next/
+
+# Hardhat artifacts & cache
+artifacts/
+cache/
+
+# Local Environment Variables
+.env
+.env.*
+
+# Local binaries or logs
+bursts
+getshares
+log.txt
