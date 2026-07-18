@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAccount, useConnect, useReadContract, useWriteContract } from 'wagmi'
 import MiningPanel from './components/MiningPanel'
 
@@ -30,6 +30,12 @@ if (typeof window !== 'undefined') {
 export default function App() {
   const { isConnected, address } = useAccount()
   const { connect, connectors, error } = useConnect()
+  const [mounted, setMounted] = useState(false)
+
+  // Prevent hydration / local storage state isolation mismatches
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // ---------------- READ CONTRACT DATA ----------------
 
@@ -37,15 +43,8 @@ export default function App() {
     address: MINING_SESSION,
     abi: abiArray,
     functionName: "getWork",
-    query: { enabled: isConnected } // Only fire when a wallet context is established
+    query: { enabled: mounted && isConnected }
   })
-
-  // Debug logs safely tracking state outside of hook configuration option limits
-  console.log("DEBUG - Current Contract Address being called:", MINING_SESSION)
-  console.log("DEBUG - Contract Work Data:", work)
-  if (workError) {
-    console.error("DEBUG - Contract Work Hook Error Details:", workError)
-  }
 
   // Safe fallback values to prevent Ethers/Viem from crashing during initial undefined renders
   const safeEpoch = work && work[0] ? work[0] : "0x0000000000000000000000000000000000000000000000000000000000000000"
@@ -56,7 +55,7 @@ export default function App() {
     abi: abiArray,
     functionName: "getShares",
     args: [safeEpoch, safeAddress],
-    query: { enabled: !!work && isConnected }
+    query: { enabled: !!work && isConnected && mounted }
   })
 
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
@@ -64,7 +63,7 @@ export default function App() {
     abi: abiArray,
     functionName: "pendingRewards",
     args: [safeEpoch, safeAddress],
-    query: { enabled: !!work && isConnected }
+    query: { enabled: !!work && isConnected && mounted }
   })
 
   // ---------------- WRITE CONTRACT CALLS ----------------
@@ -86,12 +85,11 @@ export default function App() {
 
   async function claimRewards() {
     try {
-      if (!work) return
       await writeContractAsync({
         address: MINING_SESSION,
         abi: abiArray,
         functionName: "claimRewards",
-        args: [work[0]],
+        args: [], // Fixed: claimRewards takes 0 parameters in your contract
       })
     } catch (err) {
       console.error("Claim error:", err)
@@ -99,6 +97,8 @@ export default function App() {
   }
 
   // ---------------- UI STATES ----------------
+
+  if (!mounted) return null
 
   // GUARD 1: If wallet isn't connected, prompt them immediately!
   if (!isConnected) {
