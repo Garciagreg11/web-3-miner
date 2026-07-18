@@ -39,31 +39,18 @@ export default function App() {
 
   // ---------------- READ CONTRACT DATA ----------------
 
+  // Safe fallback value for address validation
+  const safeAddress = address || "0x0000000000000000000000000000000000000000"
+
   const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
     address: MINING_SESSION,
     abi: abiArray,
     functionName: "getWork",
-    args: [], // Fixed: Takes 0 parameters on-chain
-    query: { enabled: mounted && isConnected }
-  })
-
-  // Safe fallback value for address validation
-  const safeAddress = address || "0x0000000000000000000000000000000000000000"
-
-  const { data: shares } = useReadContract({
-    address: MINING_SESSION,
-    abi: abiArray,
-    functionName: "getShares",
-    args: [safeAddress], // Fixed: Takes exactly 1 parameter (miner address)
-    query: { enabled: !!work && isConnected && mounted }
-  })
-
-  const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
-    address: MINING_SESSION,
-    abi: abiArray,
-    functionName: "pendingRewards",
-    args: [safeAddress], // Fixed: Takes exactly 1 parameter (miner address)
-    query: { enabled: !!work && isConnected && mounted }
+    args: [safeAddress], // Correct: getWork expects the miner address parameter (1 param)
+    query: { 
+      enabled: mounted && isConnected,
+      retry: false // Stop continuous loop retries if the contract reverts
+    }
   })
 
   // ---------------- WRITE CONTRACT CALLS ----------------
