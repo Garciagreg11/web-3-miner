@@ -7,10 +7,10 @@ import MiningPanel from './components/MiningPanel'
 import miningSessionAbi from "./abi/MiningSession.json"
 import { MINING_SESSION } from "./addresses"
 
-// 1. Properly process the ABI as a flat array at the file level
+// 1. Target the nested Hardhat ABI property safely
 const abiArray = Array.isArray(miningSessionAbi)
   ? miningSessionAbi
-  : (miningSessionAbi as any).default || [];
+  : (miningSessionAbi as any).abi || (miningSessionAbi as any).default || [];
 
 // 2. Silence noisy WebSocket warnings
 if (typeof window !== 'undefined') {
