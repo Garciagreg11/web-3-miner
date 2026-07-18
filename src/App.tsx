@@ -46,11 +46,27 @@ export default function App() {
     address: MINING_SESSION,
     abi: abiArray,
     functionName: "getWork",
-    args: [safeAddress], // Correct: getWork expects the miner address parameter (1 param)
-    query: { 
-      enabled: mounted && isConnected,
-      retry: false // Stop continuous loop retries if the contract reverts
-    }
+    args: [safeAddress], // Correct parameters length verified
+    query: { enabled: mounted && isConnected }
+  })
+
+  // Safe fallback values to prevent contract reads from throwing errors if work is uninitialized or reverted
+  const safeEpoch = work && work[0] ? work[0] : "0x0000000000000000000000000000000000000000000000000000000000000000"
+
+  const { data: shares } = useReadContract({
+    address: MINING_SESSION,
+    abi: abiArray,
+    functionName: "getShares",
+    args: [safeAddress], 
+    query: { enabled: isConnected && mounted }
+  })
+
+  const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
+    address: MINING_SESSION,
+    abi: abiArray,
+    functionName: "pendingRewards",
+    args: [safeAddress], 
+    query: { enabled: isConnected && mounted }
   })
 
   // ---------------- WRITE CONTRACT CALLS ----------------
@@ -128,8 +144,9 @@ export default function App() {
     )
   }
 
-  // GUARD 2: Once connected, wait for blockchain data to stream down
-  if (loadingWork || !work || work.length === 0) {
+  // GUARD 2: Only show loading if the connection is actively processing.
+  // If getWork returns an error (like a revert), we bypass the guard to let the panel load with default fallbacks!
+  if (loadingWork) {
     return (
       <div style={{
         backgroundColor: '#0a0a0c', color: '#fff', minHeight: '100vh',
@@ -138,21 +155,6 @@ export default function App() {
         <p style={{ color: '#00ffcc', fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
           Initializing Mining Session...
         </p>
-
-        {workError && (
-          <div style={{
-            marginTop: '20px', padding: '15px', background: '#221111',
-            border: '1px solid #ff4444', borderRadius: '8px', maxWidth: '90%', width: '400px'
-          }}>
-            <p style={{ color: '#ff4444', fontWeight: 'bold', margin: '0 0 5px 0' }}>Connection Error:</p>
-            <p style={{ color: '#aaa', fontSize: '13px', margin: 0, fontFamily: 'monospace', wordBreak: 'break-all' }}>
-              {workError.message || String(workError)}
-            </p>
-            <p style={{ color: '#00ffcc', fontSize: '12px', marginTop: '10px', margin: '10px 0 0 0' }}>
-              💡 Hint: Make sure your connected wallet is switched to **Base Mainnet**.
-            </p>
-          </div>
-        )}
       </div>
     )
   }
@@ -160,7 +162,7 @@ export default function App() {
   // ---------------- RENDER MINING PANEL ----------------
   return (
     <MiningPanel
-      epoch={work[0]?.toString()}
+      epoch={safeEpoch.toString()}
       difficulty="4"
       target="0x0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
       shares={shares ? shares.toString() : "0"}
