@@ -46,15 +46,14 @@ export default function App() {
     query: { enabled: mounted && isConnected }
   })
 
-  // Safe fallback values to prevent Ethers/Viem from crashing during initial undefined renders
-  const safeEpoch = work && work[0] ? work[0] : "0x0000000000000000000000000000000000000000000000000000000000000000"
+  // Safe fallback value for address validation
   const safeAddress = address || "0x0000000000000000000000000000000000000000"
 
   const { data: shares } = useReadContract({
     address: MINING_SESSION,
     abi: abiArray,
     functionName: "getShares",
-    args: [safeEpoch, safeAddress],
+    args: [safeAddress], // Fixed: Removed safeEpoch to match contract signature (1 param)
     query: { enabled: !!work && isConnected && mounted }
   })
 
@@ -62,7 +61,7 @@ export default function App() {
     address: MINING_SESSION,
     abi: abiArray,
     functionName: "pendingRewards",
-    args: [safeEpoch, safeAddress],
+    args: [safeAddress], // Fixed: Removed safeEpoch to match contract signature (1 param)
     query: { enabled: !!work && isConnected && mounted }
   })
 
@@ -151,10 +150,10 @@ export default function App() {
         <p style={{ color: '#00ffcc', fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
           Initializing Mining Session...
         </p>
-        
+
         {workError && (
           <div style={{
-            marginTop: '20px', padding: '15px', background: '#221111', 
+            marginTop: '20px', padding: '15px', background: '#221111',
             border: '1px solid #ff4444', borderRadius: '8px', maxWidth: '90%', width: '400px'
           }}>
             <p style={{ color: '#ff4444', fontWeight: 'bold', margin: '0 0 5px 0' }}>Connection Error:</p>
