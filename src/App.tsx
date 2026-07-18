@@ -17,11 +17,11 @@ if (typeof window !== 'undefined') {
   const originalWarn = console.warn;
   console.warn = (...args) => {
     if (
-      args[0] && 
-      typeof args[0] === 'string' && 
+      args[0] &&
+      typeof args[0] === 'string' &&
       (args[0].includes('WebSocket') || args[0].includes('close()'))
     ) {
-      return; 
+      return;
     }
     originalWarn(...args);
   };
@@ -33,13 +33,12 @@ export default function App() {
 
   // ---------------- READ CONTRACT DATA ----------------
 
-  // Changed abi to abiArray and functionName to getWork
-const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
-  address: MINING_SESSION,
-  abi: abiArray,
-  functionName: "getWork",
-})
-  
+  const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
+    address: MINING_SESSION,
+    abi: abiArray,
+    functionName: "getWork",
+    query: { enabled: isConnected } // Only fire when a wallet context is established
+  })
 
   // Debug logs safely tracking state outside of hook configuration option limits
   console.log("DEBUG - Current Contract Address being called:", MINING_SESSION)
@@ -57,7 +56,7 @@ const { data: work, isLoading: loadingWork, error: workError } = useReadContract
     abi: abiArray,
     functionName: "getShares",
     args: [safeEpoch, safeAddress],
-    query: { enabled: !!work && !!address }
+    query: { enabled: !!work && isConnected }
   })
 
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
@@ -65,7 +64,7 @@ const { data: work, isLoading: loadingWork, error: workError } = useReadContract
     abi: abiArray,
     functionName: "pendingRewards",
     args: [safeEpoch, safeAddress],
-    query: { enabled: !!work && !!address }
+    query: { enabled: !!work && isConnected }
   })
 
   // ---------------- WRITE CONTRACT CALLS ----------------
@@ -101,6 +100,7 @@ const { data: work, isLoading: loadingWork, error: workError } = useReadContract
 
   // ---------------- UI STATES ----------------
 
+  // GUARD 1: If wallet isn't connected, prompt them immediately!
   if (!isConnected) {
     return (
       <div style={{
@@ -141,7 +141,7 @@ const { data: work, isLoading: loadingWork, error: workError } = useReadContract
     )
   }
 
-  // Guard against missing data or empty arrays to stop downstream thread loop crashes
+  // GUARD 2: Once connected, wait for blockchain data to stream down
   if (loadingWork || !work || work.length === 0) {
     return (
       <div style={{
