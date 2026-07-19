@@ -4,10 +4,14 @@ import React, { useEffect, useState } from 'react'
 import { useAccount, useConnect, useReadContract, useWriteContract } from 'wagmi'
 import MiningPanel from './components/MiningPanel'
 
-// Import the direct network definitions from wagmi configuration to guarantee mapping
+// Import the direct network definitions from wagmi configuration
 import { miningSessionContract } from './wagmi'
 
-const contractAbi = miningSessionContract.abi as any;
+// Safely resolve the ABI array whether it's nested or flat
+const rawAbi = miningSessionContract.abi as any;
+const contractAbi = Array.isArray(rawAbi)
+  ? rawAbi
+  : rawAbi?.abi || rawAbi?.default || [];
 
 export default function App() {
   const { isConnected, address } = useAccount()
@@ -22,7 +26,7 @@ export default function App() {
 
   const safeAddress = address || "0x0000000000000000000000000000000000000000"
 
-  const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
+  const { data: work, error: workError } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "getWork",
@@ -123,7 +127,7 @@ export default function App() {
     )
   }
 
-  // Contract execution/RPC connection error fallback
+  // Fallback for RPC or runtime errors
   if (workError) {
     return (
       <div style={{
@@ -143,7 +147,6 @@ export default function App() {
   }
 
   // ---------------- RENDER MINING PANEL DIRECTLY ----------------
-  // Bypasses the blocking loading screen so the panel renders immediately with fallback values
   return (
     <MiningPanel
       epoch={work && work[0] ? work[0].toString() : "0"}
