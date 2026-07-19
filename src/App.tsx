@@ -7,7 +7,7 @@ import MiningPanel from './components/MiningPanel'
 // Import the direct network definitions from wagmi configuration
 import { miningSessionContract } from './wagmi'
 
-// Safely resolve the ABI array whether it's nested or flat
+// Safely extract the ABI array
 const rawAbi = miningSessionContract.abi as any;
 const contractAbi = Array.isArray(rawAbi)
   ? rawAbi
@@ -22,10 +22,9 @@ export default function App() {
     setMounted(true)
   }, [])
 
-  // ---------------- READ CONTRACT DATA ----------------
-
   const safeAddress = address || "0x0000000000000000000000000000000000000000"
 
+  // 1. getWork: 0 inputs -> returns [epoch, difficultyOut, targetOut]
   const { data: work, error: workError } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
@@ -33,21 +32,26 @@ export default function App() {
     query: { enabled: mounted && isConnected }
   })
 
-  const safeEpoch = work && work[0] ? work[0] : "0x0000000000000000000000000000000000000000000000000000000000000000"
+  // getWork returns [epoch, difficultyOut, targetOut]
+  const currentEpoch = work ? work[0] : 0n
+  const currentDifficulty = work ? work[1] : 4n
+  const currentTarget = work ? work[2] : 0n
 
+  // 2. getShares: 2 inputs -> [epoch, miner]
   const { data: shares } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "getShares",
-    args: [safeEpoch, safeAddress],
+    args: [currentEpoch, safeAddress],
     query: { enabled: isConnected && mounted && !!work }
   })
 
+  // 3. pendingRewards: 2 inputs -> [epoch, minerAddr]
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "pendingRewards",
-    args: [safeEpoch, safeAddress],
+    args: [currentEpoch, safeAddress],
     query: { enabled: isConnected && mounted && !!work }
   })
 
@@ -55,6 +59,7 @@ export default function App() {
 
   const { writeContractAsync } = useWriteContract()
 
+  // submitShare: 1 input -> [nonce]
   async function submitShare(nonce: bigint) {
     try {
       await writeContractAsync({
@@ -68,6 +73,7 @@ export default function App() {
     }
   }
 
+  // claimRewards: 1 input -> [epoch]
   async function claimRewards() {
     try {
       if (!work) return
@@ -75,7 +81,7 @@ export default function App() {
         address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
         abi: contractAbi,
         functionName: "claimRewards",
-        args: [work[0]],
+        args: [currentEpoch],
       })
     } catch (err) {
       console.error("Claim error:", err)
@@ -86,7 +92,6 @@ export default function App() {
 
   if (!mounted) return null
 
-  // Prompt wallet connection immediately
   if (!isConnected) {
     return (
       <div style={{
@@ -127,7 +132,6 @@ export default function App() {
     )
   }
 
-  // Fallback for RPC or runtime errors
   if (workError) {
     return (
       <div style={{
@@ -146,12 +150,11 @@ export default function App() {
     )
   }
 
-  // ---------------- RENDER MINING PANEL DIRECTLY ----------------
   return (
     <MiningPanel
-      epoch={work && work[0] ? work[0].toString() : "0"}
-      difficulty="4"
-      target="0x0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      epoch={currentEpoch.toString()}
+      difficulty={currentDifficulty.toString()}
+      target={"0x" + currentTarget.toString(16)}
       shares={shares ? shares.toString() : "0"}
       pendingRewards={pendingRewards ? pendingRewards.toString() : "0"}
       loadingRewards={loadingRewards}
