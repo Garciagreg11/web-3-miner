@@ -33,26 +33,26 @@ export default function App() {
   })
 
   // getWork returns [epoch, difficultyOut, targetOut]
-  const currentEpoch = work ? work[0] : 0n
+  const currentEpoch = work ? BigInt(work[0].toString()) : 0n
   const currentDifficulty = work ? work[1] : 4n
   const currentTarget = work ? work[2] : 0n
 
-  // 2. getShares: 2 inputs -> [epoch, miner]
+  // 2. getShares: 2 inputs -> [epoch, miner] (only run when work is loaded)
   const { data: shares } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "getShares",
     args: [currentEpoch, safeAddress],
-    query: { enabled: isConnected && mounted && !!work }
+    query: { enabled: isConnected && mounted && Array.isArray(work) && work.length > 0 }
   })
 
-  // 3. pendingRewards: 2 inputs -> [epoch, minerAddr]
+  // 3. pendingRewards: 2 inputs -> [epoch, minerAddr] (only run when work is loaded)
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "pendingRewards",
     args: [currentEpoch, safeAddress],
-    query: { enabled: isConnected && mounted && !!work }
+    query: { enabled: isConnected && mounted && Array.isArray(work) && work.length > 0 }
   })
 
   // ---------------- WRITE CONTRACT CALLS ----------------
