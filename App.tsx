@@ -1,53 +1,46 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useAccount, useConnect, useReadContract, useWriteContract } from 'wagmi'
 import MiningPanel from './components/MiningPanel'
 
-// Import the direct network definitions from wagmi configuration to guarantee mapping
+// Import the verified contract setup directly from your wagmi configuration
 import { miningSessionContract } from './wagmi'
 
+// Cast the ABI properly for wagmi's strict type checker
 const contractAbi = miningSessionContract.abi as any;
 
 export default function App() {
   const { isConnected, address } = useAccount()
   const { connect, connectors, error } = useConnect()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
 
   // ---------------- READ CONTRACT DATA ----------------
 
-  // Safe fallback value for address validation
-  const safeAddress = address || "0x0000000000000000000000000000000000000000"
-
+  // Querying using the clean contract metadata bound to the Base network configuration
   const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
     address: miningSessionContract.address,
     abi: contractAbi,
     functionName: "getWork",
-    // Removed args parameter to match contract global storage signature
-    query: { enabled: mounted && isConnected }
   })
 
-  // Safe fallback values to prevent contract reads from throwing errors if work is uninitialized or reverted
+  // Safely fallback parameters to avoid throwing undefined evaluation errors inside active query states
   const safeEpoch = work && work[0] ? work[0] : "0x0000000000000000000000000000000000000000000000000000000000000000"
+  const safeAddress = address || "0x0000000000000000000000000000000000000000"
 
   const { data: shares } = useReadContract({
     address: miningSessionContract.address,
     abi: contractAbi,
     functionName: "getShares",
-    args: [safeEpoch, safeAddress], // Corrected signature args definition
-    query: { enabled: isConnected && mounted && !!work }
+    args: [safeEpoch, safeAddress],
+    query: { enabled: !!work && !!address }
   })
 
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
     address: miningSessionContract.address,
     abi: contractAbi,
     functionName: "pendingRewards",
-    args: [safeEpoch, safeAddress], // Corrected signature args definition
-    query: { enabled: isConnected && mounted && !!work }
+    args: [safeEpoch, safeAddress],
+    query: { enabled: !!work && !!address }
   })
 
   // ---------------- WRITE CONTRACT CALLS ----------------
@@ -74,7 +67,7 @@ export default function App() {
         address: miningSessionContract.address,
         abi: contractAbi,
         functionName: "claimRewards",
-        args: [work[0]], 
+        args: [work[0]],
       })
     } catch (err) {
       console.error("Claim error:", err)
@@ -83,9 +76,6 @@ export default function App() {
 
   // ---------------- UI STATES ----------------
 
-  if (!mounted) return null
-
-  // GUARD 1: If wallet isn't connected, prompt them immediately!
   if (!isConnected) {
     return (
       <div style={{
@@ -126,7 +116,7 @@ export default function App() {
     )
   }
 
-  // New Guard: If the RPC explicitly throws a configuration error, don't leave user blind on loading screen
+  // Graceful handling if the RPC node throws an exception or fails to hit the contract
   if (workError) {
     return (
       <div style={{
@@ -138,21 +128,21 @@ export default function App() {
             Contract Connection Error
           </p>
           <p style={{ color: '#aaa', fontSize: '14px' }}>
-            {workError.message || "Unable to read data from the Base network contract."}
+            {workError.message || "Unable to read mining session data from the Base network."}
           </p>
         </div>
       </div>
     )
   }
 
-  // GUARD 2: Only show loading if the connection is actively processing smoothly.
-  if (loadingWork) {
+  // Guard against missing data during the network initialization payload load window
+  if (loadingWork || !work || work.length === 0) {
     return (
       <div style={{
         backgroundColor: '#0a0a0c', color: '#fff', minHeight: '100vh',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+        display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
-        <p style={{ color: '#00ffcc', fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
+        <p style={{ color: '#00ffcc', fontSize: '18px', fontWeight: 'bold' }}>
           Initializing Mining Session...
         </p>
       </div>
@@ -162,7 +152,7 @@ export default function App() {
   // ---------------- RENDER MINING PANEL ----------------
   return (
     <MiningPanel
-      epoch={work && work[0] ? work[0].toString() : "0"}
+      epoch={work[0]?.toString()}
       difficulty="4"
       target="0x0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
       shares={shares ? shares.toString() : "0"}
