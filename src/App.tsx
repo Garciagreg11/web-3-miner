@@ -20,33 +20,30 @@ export default function App() {
 
   // ---------------- READ CONTRACT DATA ----------------
 
-  // Safe fallback value for address validation
   const safeAddress = address || "0x0000000000000000000000000000000000000000"
 
   const { data: work, isLoading: loadingWork, error: workError } = useReadContract({
-    address: miningSessionContract.address,
+    address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "getWork",
-    // Removed args parameter to match contract global storage signature
     query: { enabled: mounted && isConnected }
   })
 
-  // Safe fallback values to prevent contract reads from throwing errors if work is uninitialized or reverted
   const safeEpoch = work && work[0] ? work[0] : "0x0000000000000000000000000000000000000000000000000000000000000000"
 
   const { data: shares } = useReadContract({
-    address: miningSessionContract.address,
+    address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "getShares",
-    args: [safeEpoch, safeAddress], // Corrected signature args definition
+    args: [safeEpoch, safeAddress],
     query: { enabled: isConnected && mounted && !!work }
   })
 
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
-    address: miningSessionContract.address,
+    address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "pendingRewards",
-    args: [safeEpoch, safeAddress], // Corrected signature args definition
+    args: [safeEpoch, safeAddress],
     query: { enabled: isConnected && mounted && !!work }
   })
 
@@ -57,7 +54,7 @@ export default function App() {
   async function submitShare(nonce: bigint) {
     try {
       await writeContractAsync({
-        address: miningSessionContract.address,
+        address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
         abi: contractAbi,
         functionName: "submitShare",
         args: [nonce],
@@ -71,10 +68,10 @@ export default function App() {
     try {
       if (!work) return
       await writeContractAsync({
-        address: miningSessionContract.address,
+        address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
         abi: contractAbi,
         functionName: "claimRewards",
-        args: [work[0]], 
+        args: [work[0]],
       })
     } catch (err) {
       console.error("Claim error:", err)
@@ -85,7 +82,7 @@ export default function App() {
 
   if (!mounted) return null
 
-  // GUARD 1: If wallet isn't connected, prompt them immediately!
+  // Prompt wallet connection immediately
   if (!isConnected) {
     return (
       <div style={{
@@ -126,7 +123,7 @@ export default function App() {
     )
   }
 
-  // New Guard: If the RPC explicitly throws a configuration error, don't leave user blind on loading screen
+  // Contract execution/RPC connection error fallback
   if (workError) {
     return (
       <div style={{
@@ -145,21 +142,8 @@ export default function App() {
     )
   }
 
-  // GUARD 2: Only show loading if the connection is actively processing smoothly.
-  if (loadingWork) {
-    return (
-      <div style={{
-        backgroundColor: '#0a0a0c', color: '#fff', minHeight: '100vh',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
-      }}>
-        <p style={{ color: '#00ffcc', fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
-          Initializing Mining Session...
-        </p>
-      </div>
-    )
-  }
-
-  // ---------------- RENDER MINING PANEL ----------------
+  // ---------------- RENDER MINING PANEL DIRECTLY ----------------
+  // Bypasses the blocking loading screen so the panel renders immediately with fallback values
   return (
     <MiningPanel
       epoch={work && work[0] ? work[0].toString() : "0"}
