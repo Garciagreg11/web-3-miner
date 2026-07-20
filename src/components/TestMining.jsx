@@ -11,7 +11,8 @@ export default function TestMining() {
       try {
         const owner = await contract.owner();
         const me = await contract.signer.getAddress();
-        const difficulty = await contract.getDifficulty();
+        const difficulty = await contract.difficulty();
+
 
         console.log("Contract Owner:", owner);
         console.log("Your Wallet:", me);

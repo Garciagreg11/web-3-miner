@@ -1,0 +1,64 @@
+// src/mining-worker.js
+// Module worker (bundle as module worker: Vite/Next style).
+// Computes keccak256(abi.encodePacked(miner, nonce)) candidates and posts back shares/hashrate.
+
+import { keccak256, encodePacked } from "viem";
+
+let isMining = false;
+const DIFFICULTY_MULTIPLIER = 120000n;
+
+self.onmessage = async (event) => {
+  const msg = event.data;
+
+  if (msg.type === "start") {
+    isMining = true;
+    const minerAddress = msg.miner;
+    const rawTarget = msg.target; // hex or decimal string
+    const targetBig = BigInt(rawTarget);
+    const targetValue = targetBig / DIFFICULTY_MULTIPLIER;
+    let nonce = msg.startNonce ? BigInt(msg.startNonce) : BigInt(Math.floor(Math.random() * 1e8));
+    let hashesCount = 0;
+    let lastReportTime = performance.now();
+
+    try {
+      while (isMining) {
+        // pack exactly as contract expects: abi.encodePacked(address, uint256)
+        const packed = encodePacked(["address", "uint256"], [minerAddress, nonce]);
+        const hashHex = keccak256(packed); // '0x...'
+        const hashBig = BigInt(hashHex);
+
+        if (hashBig < targetValue) {
+          // candidate found — send to main thread for final verification & submit
+          self.postMessage({
+            type: "share",
+            nonce: nonce.toString(),
+            hash: hashHex,
+          });
+        }
+
+        nonce = nonce + 1n;
+        hashesCount++;
+
+        const now = performance.now();
+        if (now - lastReportTime >= 1000) {
+          const timePassed = (now - lastReportTime) / 1000;
+          const hashrate = Math.floor(hashesCount / Math.max(0.001, timePassed));
+          self.postMessage({ type: "hashrate", hashrate });
+          hashesCount = 0;
+          lastReportTime = now;
+        }
+
+        // yield occasionally to keep UI responsive
+        if ((nonce & 0x1ffn) === 0n) {
+          await new Promise((r) => setTimeout(r, 0));
+        }
+      }
+    } catch (err) {
+      self.postMessage({ type: "error", error: String(err) });
+    }
+  }
+
+  if (msg.type === "stop") {
+    isMining = false;
+  }
+};

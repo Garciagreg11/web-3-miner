@@ -13,9 +13,10 @@ export default function AdminPanel() {
       if (!contract) return;
 
       try {
-        const d = await contract.getDifficulty();
+        const d = await contract.difficulty();
         const o = await contract.owner();
-        const m = await contract.signer.getAddress();
+        const m = await contract.signer.getAddress();     
+        
 
         setDifficulty(Number(d));
         setOwner(o);

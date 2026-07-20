@@ -2,7 +2,7 @@
   "name": "web-3-miner",
   "version": "1.0.0",
   "private": true,
-  "description": "",
+  "description": "Web 3 Miner is a browser‑based Proof‑of‑Work engine powered by Keccak‑256.   Users mine shares directly from their browser using a lightweight Web Worker, submit valid shares on‑chain, and earn rewards based on their mining performance.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -15,10 +15,11 @@
     "@tanstack/react-query": "^5.101.0",
     "@wagmi/core": "^1.4.13",
     "dotenv": "^17.4.2",
+    "promise-retry": "^2.0.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "three": "^0.164.0",
-    "vercel": "^54.14.2",
+    "vercel": "^56.1.0",
     "viem": "^2.52.0",
     "wagmi": "^3.6.16"
   },
@@ -35,5 +36,17 @@
     "mocha": "^10.8.2",
     "typescript": "^6.0.3",
     "vite": "^5.4.21"
-  }
+  },
+  "main": "MiningContext.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Garciagreg11/web-3-miner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Garciagreg11/web-3-miner/issues"
+  },
+  "homepage": "https://github.com/Garciagreg11/web-3-miner#readme"
 }

@@ -23,4 +23,10 @@ contract RewardsVault {
     function distribute(address miner, uint256 amount) external onlyOwner {
         require(rewardToken.transfer(miner, amount), "Transfer failed");
     }
+
+    // Add this right here:
+    function setOwner(address _newOwner) external onlyOwner {
+        require(_newOwner != address(0), "Invalid address");
+        owner = _newOwner;
+    }
 }

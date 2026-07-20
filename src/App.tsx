@@ -24,7 +24,7 @@ export default function App() {
 
   const safeAddress = address || "0x0000000000000000000000000000000000000000"
 
-  // 1. getWork: 0 inputs -> returns [epoch, difficultyOut, targetOut]
+  // 1. getWork: 0 inputs -> returns (epoch, difficultyOut, targetOut)
   const { data: work, error: workError } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
@@ -32,27 +32,30 @@ export default function App() {
     query: { enabled: mounted && isConnected }
   })
 
-  // getWork returns [epoch, difficultyOut, targetOut]
-  const currentEpoch = work ? BigInt(work[0].toString()) : 0n
-  const currentDifficulty = work ? work[1] : 4n
-  const currentTarget = work ? work[2] : 0n
+  // Safely extract values whether work is returned as an Array or Object
+  const workObj = work as any;
+  const currentEpoch = workObj ? BigInt(workObj.epoch ?? workObj[0] ?? 0) : 0n;
+  const currentDifficulty = workObj ? BigInt(workObj.difficultyOut ?? workObj[1] ?? 4) : 4n;
+  const currentTarget = workObj ? BigInt(workObj.targetOut ?? workObj[2] ?? 0) : 0n;
 
-  // 2. getShares: 2 inputs -> [epoch, miner] (only run when work is loaded)
+  const isWorkLoaded = isConnected && mounted && !!work;
+
+  // 2. getShares: 2 inputs -> [epoch, miner]
   const { data: shares } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "getShares",
     args: [currentEpoch, safeAddress],
-    query: { enabled: isConnected && mounted && Array.isArray(work) && work.length > 0 }
+    query: { enabled: isWorkLoaded }
   })
 
-  // 3. pendingRewards: 2 inputs -> [epoch, minerAddr] (only run when work is loaded)
+  // 3. pendingRewards: 2 inputs -> [epoch, minerAddr]
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "pendingRewards",
     args: [currentEpoch, safeAddress],
-    query: { enabled: isConnected && mounted && Array.isArray(work) && work.length > 0 }
+    query: { enabled: isWorkLoaded }
   })
 
   // ---------------- WRITE CONTRACT CALLS ----------------
