@@ -4,83 +4,105 @@ let mining = false;
 let totalHashes = 0;
 let startTime = Date.now();
 
-// A lightweight, zero-dependency Keccak256 implementation for the worker environment
-const RC = [
-    0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
-    0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
-    0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
-    0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
-    0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
-    0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n
-];
-
-const r = [
-    [0, 1, 62, 28, 27], [36, 44, 6, 55, 20], [3, 10, 43, 25, 39], [41, 45, 15, 21, 8], [18, 2, 61, 56, 14]
-];
-
+// Standard 64-bit Keccak-256 implementation
 function keccak256(hexInput) {
     let cleanHex = hexInput.startsWith('0x') ? hexInput.slice(2) : hexInput;
     if (cleanHex.length % 2 !== 0) cleanHex = '0' + cleanHex;
-    
-    let bytes = new Uint8Array(cleanHex.length / 2);
-    for (let i = 0; i < bytes.length; i++) {
-        bytes[i] = parseInt(cleanHex.substr(i * 2, 2), 16);
-    }
-    
-    let padded = new Uint8Array(200);
-    padded.set(bytes);
-    padded[bytes.length] = 0x01;
-    padded[135] |= 0x80;
 
-    let state = Array(5).fill(0).map(() => Array(5).fill(0n));
-    for (let i = 0; i < 17; i++) {
-        let lane = 0n;
-        for (let j = 0; j < 8; j++) {
-            lane |= BigInt(padded[i * 8 + j]) << BigInt(j * 8);
-        }
-        state[i % 5][Math.floor(i / 5)] = lane;
+    const msg = new Uint8Array(cleanHex.length / 2);
+    for (let i = 0; i < msg.length; i++) {
+        msg[i] = parseInt(cleanHex.substr(i * 2, 2), 16);
     }
 
-    // Keccak-f[1600] permutation
-    for (let round = 0; round < 24; round++) {
-        let C = Array(5).fill(0n);
-        let D = Array(5).fill(0n);
-        for (let x = 0; x < 5; x++) {
-            C[x] = state[x][0] ^ state[x][1] ^ state[x][2] ^ state[x][3] ^ state[x][4];
-        }
-        for (let x = 0; x < 5; x++) {
-            let nextX = (x + 1) % 5;
-            let prevX = (x + 4) % 5;
-            D[x] = C[prevX] ^ ((C[nextX] << 1n) | (C[nextX] >> 63n));
-        }
-        for (let x = 0; x < 5; x++) {
-            for (let y = 0; y < 5; y++) {
-                state[x][y] ^= D[x];
+    // Keccak-256 parameters: rate = 1088 bits (136 bytes), capacity = 512 bits (64 bytes)
+    const RATE = 136;
+    const len = msg.length;
+    let blocks = Math.floor(len / RATE) + 1;
+    let paddedLen = blocks * RATE;
+    let padded = new Uint8Array(paddedLen);
+    padded.set(msg);
+
+    // Padding pattern: 0x01 ... 0x80
+    padded[len] ^= 0x01;
+    padded[paddedLen - 1] ^= 0x80;
+
+    let state = new BigUint64Array(25);
+
+    // Round constants
+    const RC = [
+        0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
+        0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
+        0x000000000000008an, 0x0000000000000088n, 0x0000000080008009n, 0x000000008000000an,
+        0x000000008000808bn, 0x800000000000008bn, 0x8000000000008089n, 0x8000000000008003n,
+        0x8000000000008002n, 0x8000000000000080n, 0x000000000000800an, 0x800000008000000an,
+        0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n
+    ];
+
+    const R = [
+        0, 36, 3, 41, 18, 1, 44, 10, 45, 2, 62, 6, 43, 15, 61, 28, 55, 25, 21, 56, 27, 20, 39, 8, 14
+    ];
+
+    for (let b = 0; b < blocks; b++) {
+        for (let i = 0; i < RATE / 8; i++) {
+            let lane = 0n;
+            for (let j = 0; j < 8; j++) {
+                lane |= BigInt(padded[b * RATE + i * 8 + j]) << BigInt(j * 8);
             }
+            state[i] ^= lane;
         }
-        let nextState = Array(5).fill(0).map(() => Array(5).fill(0n));
-        for (let x = 0; x < 5; x++) {
-            for (let y = 0; y < 5; y++) {
-                let shift = BigInt(r[x][y]);
-                nextState[y][(2 * x + 3 * y) % 5] = ((state[x][y] << shift) | (state[x][y] >> (64n - shift)));
+
+        // Keccak-f[1600] permutation
+        for (let round = 0; round < 24; round++) {
+            let C = new BigUint64Array(5);
+            let D = new BigUint64Array(5);
+
+            for (let x = 0; x < 5; x++) {
+                C[x] = state[x] ^ state[x + 5] ^ state[x + 10] ^ state[x + 15] ^ state[x + 20];
             }
-        }
-        for (let x = 0; x < 5; x++) {
-            for (let y = 0; y < 5; y++) {
-                state[x][y] = nextState[x][y] ^ ((~nextState[(x + 1) % 5][y]) & nextState[(x + 2) % 5][y]);
+
+            for (let x = 0; x < 5; x++) {
+                let nextX = (x + 1) % 5;
+                let prevX = (x + 4) % 5;
+                let rot = C[nextX];
+                D[x] = C[prevX] ^ ((rot << 1n) | (rot >> 63n));
             }
+
+            for (let i = 0; i < 25; i++) {
+                state[i] ^= D[i % 5];
+            }
+
+            let B = new BigUint64Array(25);
+            for (let x = 0; x < 5; x++) {
+                for (let y = 0; y < 5; y++) {
+                    let idx = x + 5 * y;
+                    let rot = BigInt(R[idx]);
+                    let val = state[idx];
+                    let rotVal = (val << rot) | (val >> (64n - rot));
+                    let nextIdx = y + 5 * ((2 * x + 3 * y) % 5);
+                    B[nextIdx] = rotVal;
+                }
+            }
+
+            for (let x = 0; x < 5; x++) {
+                for (let y = 0; y < 5; y++) {
+                    let idx = x + 5 * y;
+                    state[idx] = B[idx] ^ ((~B[((x + 1) % 5) + 5 * y]) & B[((x + 2) % 5) + 5 * y]);
+                }
+            }
+
+            state[0] ^= RC[round];
         }
-        state[0][0] ^= RC[round];
     }
 
     let outHex = '';
     for (let i = 0; i < 4; i++) {
-        let lane = state[i % 5][Math.floor(i / 5)];
+        let lane = state[i];
         for (let j = 0; j < 8; j++) {
             let byte = Number((lane >> BigInt(j * 8)) & 0xffn);
             outHex += byte.toString(16).padStart(2, '0');
         }
     }
+
     return '0x' + outHex;
 }
 
@@ -102,22 +124,24 @@ self.onmessage = function (e) {
 function mine(challenge, target, userAddress) {
     let nonce = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
 
-    const targetString = target && target.startsWith('0x') ? target : "0x0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    // Default to an easier baseline target if contract target isn't supplied
+    const targetString = (target && target.startsWith('0x') && target.length === 66)
+        ? target
+        : "0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+
     const targetBN = BigInt(targetString);
 
     function hashBatch() {
         if (!mining) return;
 
-        const batchSize = 200; 
+        const batchSize = 300;
         for (let i = 0; i < batchSize; i++) {
             nonce++;
 
-            // Pad the nonce out to 64 characters (32 bytes) to match Solidity abi.encodePacked uint256 spacing
             let nonceHex = nonce.toString(16).padStart(64, '0');
-
             const cleanChallenge = (challenge || "").startsWith('0x') ? challenge.slice(2) : (challenge || "");
             const cleanAddress = (userAddress || "").startsWith('0x') ? userAddress.slice(2) : (userAddress || "");
-            
+
             const input = '0x' + cleanChallenge.toLowerCase() + cleanAddress.toLowerCase() + nonceHex;
             const computedHash = keccak256(input);
             const hashBN = BigInt(computedHash);
