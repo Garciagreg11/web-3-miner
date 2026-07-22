@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
+import { miningSessionContract } from '../wagmi';
 
 // ==========================================
 // CONFIGURATION & CONTRACT DETAILS
 // ==========================================
-// Your greggarcia72 Creator Coin / Miner Contract Address
-const MINER_CONTRACT_ADDRESS = '0x0d500B1d29Eae3C1C2caA262E00b39d12DB4f99E';
+// Uses the mining session contract address defined in src/wagmi.ts
+const MINER_CONTRACT_ADDRESS = miningSessionContract.address;
 
 const MINER_ABI = [
   {
@@ -16,14 +17,14 @@ const MINER_ABI = [
         "type": "uint256"
       }
     ],
-    "name": "submitShare", // Matches contract name for submitting hashes
+    "name": "submitShare",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "claimRewards", // Matches contract name for pulling pending balances
+    "name": "claimRewards",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
