@@ -1,5 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
+import { base } from 'wagmi/chains';
 import { miningSessionContract } from '../wagmi';
 
 const MINER_CONTRACT_ADDRESS = miningSessionContract.address;
@@ -64,7 +66,8 @@ export default function MiningPanel({
         setHashrate(currentHashrate);
         setTotalHashes(runHashes);
       } else if (status === 'SHARE_FOUND') {
-        workerRef.current?.postMessage({ cmd: 'RESUME' });
+        // PAUSE worker so nonces freeze on screen for wallet signature
+        workerRef.current?.postMessage({ cmd: 'PAUSE' });
         setFoundNonce(nonce);
       }
     };
@@ -114,9 +117,11 @@ export default function MiningPanel({
         abi: MINER_ABI,
         functionName: 'submitShare',
         args: [cleanNonce],
+        chainId: base.id, // Enforce Base network explicitly
         gas: 150000n,
       });
       setFoundNonce(null);
+      // Resume hashing after successful wallet confirmation
       workerRef.current?.postMessage({ cmd: 'RESUME' });
     } catch (err: any) {
       if (!err?.message?.includes("User denied")) {
@@ -137,6 +142,7 @@ export default function MiningPanel({
         address: MINER_CONTRACT_ADDRESS,
         abi: MINER_ABI,
         functionName: 'claimRewards',
+        chainId: base.id, // Enforce Base network explicitly
         gas: 100000n,
       });
     } catch (err: any) {
@@ -147,10 +153,6 @@ export default function MiningPanel({
       setIsClaiming(false);
     }
   };
-
-  const formattedRewards = pendingRewards !== "0"
-    ? (Number(pendingRewards) / 1e18).toFixed(6)
-    : "0.000000";
 
   return (
     <div style={{
@@ -230,17 +232,17 @@ export default function MiningPanel({
           <div>
             <div style={{ color: '#94a3b8', fontSize: '12px' }}>PENDING BALANCE {loadingRewards && '...'}</div>
             <div style={{ fontSize: '24px', fontWeight: 'bold', marginTop: '5px', color: '#f8fafc' }}>
-              {formattedRewards} <span style={{ fontSize: '14px', color: '#64748b' }}>HVLT</span>
+              {pendingRewards} <span style={{ fontSize: '14px', color: '#64748b' }}>HVLT</span>
             </div>
           </div>
           <button
             onClick={handleClaimRewards}
-            disabled={pendingRewards === "0" || isClaiming}
+            disabled={pendingRewards === "0" || pendingRewards === "0.000000" || isClaiming}
             style={{
               padding: '10px 20px', background: '#ffffff', color: '#000',
               border: 'none', borderRadius: '6px', fontWeight: 'bold',
-              cursor: (pendingRewards === "0" || isClaiming) ? 'not-allowed' : 'pointer',
-              opacity: (pendingRewards === "0" || isClaiming) ? 0.4 : 1
+              cursor: (pendingRewards === "0" || pendingRewards === "0.000000" || isClaiming) ? 'not-allowed' : 'pointer',
+              opacity: (pendingRewards === "0" || pendingRewards === "0.000000" || isClaiming) ? 0.4 : 1
             }}
           >
             {isClaiming ? 'Claiming...' : 'Claim'}
