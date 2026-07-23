@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { useAccount, useConnect, useReadContract, useWriteContract } from 'wagmi'
+import { base } from 'wagmi/chains'
+import { formatEther } from 'viem'
 import MiningPanel from './components/MiningPanel'
 
 // Import the direct network definitions from wagmi configuration
@@ -29,6 +31,7 @@ export default function App() {
     address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
     abi: contractAbi,
     functionName: "getWork",
+    chainId: base.id,
     query: { enabled: mounted && isConnected }
   })
 
@@ -46,6 +49,7 @@ export default function App() {
     abi: contractAbi,
     functionName: "getShares",
     args: [currentEpoch, safeAddress],
+    chainId: base.id,
     query: { enabled: isWorkLoaded }
   })
 
@@ -55,6 +59,7 @@ export default function App() {
     abi: contractAbi,
     functionName: "pendingRewards",
     args: [currentEpoch, safeAddress],
+    chainId: base.id,
     query: { enabled: isWorkLoaded }
   })
 
@@ -72,6 +77,7 @@ export default function App() {
         abi: contractAbi,
         functionName: "submitShare",
         args: [cleanNonce],
+        chainId: base.id, // Explicitly target Base mainnet
         gas: 150000n,
       })
     } catch (err) {
@@ -88,6 +94,7 @@ export default function App() {
         abi: contractAbi,
         functionName: "claimRewards",
         args: [currentEpoch],
+        chainId: base.id, // Explicitly target Base mainnet
       })
     } catch (err) {
       console.error("Claim error:", err)
@@ -156,13 +163,18 @@ export default function App() {
     )
   }
 
+  // Format pending rewards safely using formatEther
+  const formattedRewards = pendingRewards
+    ? formatEther(BigInt(pendingRewards.toString()))
+    : "0.000000";
+
   return (
     <MiningPanel
       epoch={currentEpoch.toString()}
       difficulty={currentDifficulty.toString()}
       target={"0x" + currentTarget.toString(16)}
       shares={shares ? shares.toString() : "0"}
-      pendingRewards={pendingRewards ? pendingRewards.toString() : "0"}
+      pendingRewards={formattedRewards}
       loadingRewards={loadingRewards}
       submitShare={submitShare}
       claimRewards={claimRewards}
