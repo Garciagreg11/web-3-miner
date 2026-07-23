@@ -56,6 +56,7 @@ export default function MiningPanel({
   const workerRef = useRef<Worker | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -83,11 +84,14 @@ export default function MiningPanel({
         setHashrate(currentHashrate);
         setTotalHashes(runHashes);
       } else if (status === 'SHARE_FOUND') {
-        stopMining(); // Pause worker loop while sending blockchain transaction
+        // Prevent launching duplicate prompts if one is already pending approval
+        if (isSubmitting) return;
+
+        stopMining();
+        setIsSubmitting(true);
 
         try {
           console.log(`✨ Valid nonce found: ${nonce}. Submitting share on-chain...`);
-          
           const cleanNonce = typeof nonce === 'string' ? BigInt(nonce) : BigInt(nonce || 0);
 
           const tx = await writeContractAsync({
@@ -95,14 +99,17 @@ export default function MiningPanel({
             abi: MINER_ABI,
             functionName: 'submitShare',
             args: [cleanNonce],
-            gas: 150000n, // Explicit gas limit prevents RPC gas estimation failures
+            gas: 150000n, // Explicit gas limit
           });
           console.log("Share submitted successfully! Tx Hash:", tx);
-
-          // Auto-resume local mining after share transaction is broadcast
-          startMining();
         } catch (err: any) {
-          setError(err?.message || "Failed to submit discovered share to the network.");
+          // Ignore non-critical user-cancelled wallet prompts
+          if (!err?.message?.includes("User denied transaction signature")) {
+            setError(err?.message || "Failed to submit share.");
+          }
+        } finally {
+          setIsSubmitting(false);
+          startMining(); // Auto-resume mining after transaction finishes
         }
       }
     };
