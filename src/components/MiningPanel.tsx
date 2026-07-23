@@ -2,20 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { miningSessionContract } from '../wagmi';
 
-// ==========================================
-// CONFIGURATION & CONTRACT DETAILS
-// ==========================================
 const MINER_CONTRACT_ADDRESS = miningSessionContract.address;
 
 const MINER_ABI = [
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "nonce",
-        "type": "uint256"
-      }
-    ],
+    "inputs": [{ "internalType": "uint256", "name": "nonce", "type": "uint256" }],
     "name": "submitShare",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -53,76 +44,48 @@ export default function MiningPanel({
   const [isMining, setIsMining] = useState(false);
   const [hashrate, setHashrate] = useState(0);
   const [totalHashes, setTotalHashes] = useState(0);
-  const workerRef = useRef<Worker | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [foundNonce, setFoundNonce] = useState<string | null>(null);
 
-  // 🔒 Lock reference to stop duplicate wallet prompts while one is open
-  const isSigningRef = useRef(false);
+  const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
-    return () => {
-      if (workerRef.current) workerRef.current.terminate();
-    };
-  }, []);
-
-  // 1. Core Mining Engine Loop Configuration
-  const startMining = () => {
-    if (!address) {
-      setError("Please connect your wallet first.");
-      return;
-    }
-    setError(null);
-
     workerRef.current = new Worker(
       new URL('../mining-worker.js', import.meta.url),
       { type: 'module' }
     );
 
-    workerRef.current.onmessage = async (e) => {
+    workerRef.current.onmessage = (e) => {
       const { status, hashrate: currentHashrate, totalHashes: runHashes, nonce } = e.data;
 
       if (status === 'PROGRESS') {
         setHashrate(currentHashrate);
         setTotalHashes(runHashes);
       } else if (status === 'SHARE_FOUND') {
-        // If wallet popup is already active, skip triggering another one
-        if (isSigningRef.current) {
-          console.log("Wallet signing prompt already active. Skipping duplicate share prompt.");
-          return;
-        }
-
-        stopMining(); // Pause worker loop while sending blockchain transaction
-
-        try {
-          isSigningRef.current = true;
-          console.log(`✨ Valid nonce found: ${nonce}. Submitting share on-chain...`);
-          
-          const cleanNonce = typeof nonce === 'string' ? BigInt(nonce) : BigInt(nonce || 0);
-
-          const tx = await writeContractAsync({
-            address: MINER_CONTRACT_ADDRESS,
-            abi: MINER_ABI,
-            functionName: 'submitShare',
-            args: [cleanNonce],
-            gas: 150000n,
-          });
-          console.log("Share submitted successfully! Tx Hash:", tx);
-        } catch (err: any) {
-          // Gracefully suppress user rejection/denial warnings in the UI
-          if (err?.code === 4001 || err?.message?.includes("User denied transaction signature")) {
-            console.log("User dismissed transaction signature request.");
-          } else {
-            setError(err?.message || "Failed to submit discovered share to the network.");
-          }
-        } finally {
-          isSigningRef.current = false;
-          startMining(); // Auto-resume local worker after prompt resolves
-        }
+        workerRef.current?.postMessage({ cmd: 'PAUSE' });
+        setFoundNonce(nonce);
       }
     };
 
-    workerRef.current.postMessage({
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+  }, []);
+
+  const startMining = () => {
+    if (!address) {
+      setError("Please connect your wallet first.");
+      return;
+    }
+    setError(null);
+    setFoundNonce(null);
+
+    workerRef.current?.postMessage({
       cmd: 'START',
       target: target || "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       challenge: epoch || "0x0000000000000000000000000000000000000000000000000000000000000001",
@@ -133,33 +96,51 @@ export default function MiningPanel({
   };
 
   const stopMining = () => {
-    if (workerRef.current) {
-      workerRef.current.postMessage({ cmd: 'STOP' });
-      workerRef.current.terminate();
-      workerRef.current = null;
-    }
+    workerRef.current?.postMessage({ cmd: 'STOP' });
     setIsMining(false);
     setHashrate(0);
+    setFoundNonce(null);
   };
 
-  // 2. Claim Rewards Interaction
+  const handleSubmitShare = async () => {
+    if (!foundNonce || !address) return;
+    setError(null);
+    setIsSubmitting(true);
+
+    try {
+      const cleanNonce = BigInt(foundNonce);
+      await writeContractAsync({
+        address: MINER_CONTRACT_ADDRESS,
+        abi: MINER_ABI,
+        functionName: 'submitShare',
+        args: [cleanNonce],
+        gas: 150000n,
+      });
+      setFoundNonce(null);
+      workerRef.current?.postMessage({ cmd: 'RESUME' });
+    } catch (err: any) {
+      if (!err?.message?.includes("User denied")) {
+        setError(err?.message || "Failed to submit share.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleClaimRewards = async () => {
     if (!address) return;
     setError(null);
     setIsClaiming(true);
 
     try {
-      const tx = await writeContractAsync({
+      await writeContractAsync({
         address: MINER_CONTRACT_ADDRESS,
         abi: MINER_ABI,
         functionName: 'claimRewards',
         gas: 100000n,
       });
-      console.log("Claim transaction submitted successfully! Tx Hash:", tx);
     } catch (err: any) {
-      if (err?.code === 4001 || err?.message?.includes("User denied transaction signature")) {
-        console.log("User cancelled claim transaction.");
-      } else {
+      if (!err?.message?.includes("User denied")) {
         setError(err?.message || "Blockchain transaction failed while claiming rewards.");
       }
     } finally {
@@ -180,7 +161,6 @@ export default function MiningPanel({
         background: '#131316', border: '1px solid #222', borderRadius: '16px',
         width: '100%', maxWidth: '600px', padding: '30px', boxSizing: 'border-box'
       }}>
-
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
           <div>
             <h2 style={{ margin: 0, fontSize: '22px' }}>GPU Hashing Node</h2>
@@ -218,6 +198,29 @@ export default function MiningPanel({
             <div style={{ fontFamily: 'monospace', fontSize: '16px' }}>{totalHashes.toLocaleString()}</div>
           </div>
         </div>
+
+        {foundNonce && (
+          <div style={{
+            background: 'rgba(0, 255, 204, 0.1)', border: '1px solid #00ffcc',
+            padding: '15px', borderRadius: '8px', marginBottom: '20px',
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center'
+          }}>
+            <div>
+              <div style={{ color: '#00ffcc', fontWeight: 'bold', fontSize: '13px' }}>✨ VALID SHARE SOLVED!</div>
+              <div style={{ color: '#888', fontSize: '11px', fontFamily: 'monospace' }}>Nonce: {foundNonce}</div>
+            </div>
+            <button
+              onClick={handleSubmitShare}
+              disabled={isSubmitting}
+              style={{
+                padding: '8px 16px', background: '#00ffcc', color: '#000',
+                border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer'
+              }}
+            >
+              {isSubmitting ? 'Submitting...' : 'SUBMIT SHARE'}
+            </button>
+          </div>
+        )}
 
         <div style={{
           background: 'linear-gradient(135deg, #16222f 0%, #131316 100%)',
@@ -277,7 +280,6 @@ export default function MiningPanel({
             ENGAGE HASHING THREADS
           </button>
         )}
-
       </div>
     </div>
   );
