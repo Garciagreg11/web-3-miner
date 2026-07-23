@@ -1,6 +1,5 @@
-// src/mining-worker.js
-
 let mining = false;
+let isPaused = false;
 let totalHashes = 0;
 let startTime = Date.now();
 
@@ -112,12 +111,18 @@ self.onmessage = function (e) {
     if (cmd === 'START') {
         if (mining) return;
         mining = true;
+        isPaused = false;
         totalHashes = 0;
         startTime = Date.now();
 
         mine(challenge, target, userAddress);
+    } else if (cmd === 'PAUSE') {
+        isPaused = true;
+    } else if (cmd === 'RESUME') {
+        isPaused = false;
     } else if (cmd === 'STOP') {
         mining = false;
+        isPaused = false;
     }
 };
 
@@ -134,6 +139,12 @@ function mine(challenge, target, userAddress) {
     function hashBatch() {
         if (!mining) return;
 
+        // If currently waiting for wallet signature, idle temporarily without generating nonces
+        if (isPaused) {
+            setTimeout(hashBatch, 100);
+            return;
+        }
+
         const batchSize = 300;
         for (let i = 0; i < batchSize; i++) {
             nonce++;
@@ -147,12 +158,15 @@ function mine(challenge, target, userAddress) {
             const hashBN = BigInt(computedHash);
 
             if (hashBN <= targetBN) {
-                mining = false;
+                // Pause thread immediately when a valid share is found
+                isPaused = true;
                 self.postMessage({
                     status: 'SHARE_FOUND',
                     nonce: nonce.toString(),
                     hash: computedHash
                 });
+                // Continue loop after posting message so it checks isPaused status
+                setTimeout(hashBatch, 0);
                 return;
             }
         }
