@@ -5,7 +5,6 @@ import { miningSessionContract } from '../wagmi';
 // ==========================================
 // CONFIGURATION & CONTRACT DETAILS
 // ==========================================
-// Uses the mining session contract address defined in src/wagmi.ts
 const MINER_CONTRACT_ADDRESS = miningSessionContract.address;
 
 const MINER_ABI = [
@@ -88,15 +87,19 @@ export default function MiningPanel({
 
         try {
           console.log(`✨ Valid nonce found: ${nonce}. Submitting share on-chain...`);
+          
+          const cleanNonce = typeof nonce === 'string' ? BigInt(nonce) : BigInt(nonce || 0);
+
           const tx = await writeContractAsync({
             address: MINER_CONTRACT_ADDRESS,
             abi: MINER_ABI,
             functionName: 'submitShare',
-            args: [BigInt(nonce)],
+            args: [cleanNonce],
+            gas: 150000n, // Explicit gas limit prevents RPC gas estimation failures
           });
           console.log("Share submitted successfully! Tx Hash:", tx);
 
-          // Auto-resume mining after transaction is pushed
+          // Auto-resume local mining after share transaction is broadcast
           startMining();
         } catch (err: any) {
           setError(err?.message || "Failed to submit discovered share to the network.");
@@ -135,6 +138,7 @@ export default function MiningPanel({
         address: MINER_CONTRACT_ADDRESS,
         abi: MINER_ABI,
         functionName: 'claimRewards',
+        gas: 100000n,
       });
       console.log("Claim transaction submitted successfully! Tx Hash:", tx);
     } catch (err: any) {
