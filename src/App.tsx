@@ -63,13 +63,16 @@ export default function App() {
   const { writeContractAsync } = useWriteContract()
 
   // submitShare: 1 input -> [nonce]
-  async function submitShare(nonce: bigint) {
+  async function submitShare(nonce: bigint | string) {
     try {
+      const cleanNonce = typeof nonce === 'string' ? BigInt(nonce) : nonce;
+
       await writeContractAsync({
         address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
         abi: contractAbi,
         functionName: "submitShare",
-        args: [nonce],
+        args: [cleanNonce],
+        gas: 150000n,
       })
     } catch (err) {
       console.error("Submit share error:", err)
