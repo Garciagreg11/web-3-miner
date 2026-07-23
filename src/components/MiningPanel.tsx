@@ -64,7 +64,7 @@ export default function MiningPanel({
         setHashrate(currentHashrate);
         setTotalHashes(runHashes);
       } else if (status === 'SHARE_FOUND') {
-        workerRef.current?.postMessage({ cmd: 'PAUSE' });
+        workerRef.current?.postMessage({ cmd: 'RESUME' });
         setFoundNonce(nonce);
       }
     };
