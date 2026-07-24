@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { base } from 'wagmi/chains';
-import { miningSessionContract } from '../wagmi';
+const MINER_CONTRACT_ADDRESS = '0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA';
 
 const MINER_CONTRACT_ADDRESS = miningSessionContract.address;
 
