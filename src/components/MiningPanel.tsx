@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAccount, useWriteContract } from 'wagmi';
 import { base } from 'wagmi/chains';
