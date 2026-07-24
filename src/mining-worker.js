@@ -3,7 +3,7 @@ let isPaused = false;
 let totalHashes = 0;
 let startTime = Date.now();
 
-// Standard 64-bit Keccak-256 implementation
+// Standard Keccak-256 implementation
 function keccak256(hexInput) {
     let cleanHex = hexInput.startsWith('0x') ? hexInput.slice(2) : hexInput;
     if (cleanHex.length % 2 !== 0) cleanHex = '0' + cleanHex;
@@ -13,7 +13,6 @@ function keccak256(hexInput) {
         msg[i] = parseInt(cleanHex.substr(i * 2, 2), 16);
     }
 
-    // Keccak-256 parameters: rate = 1088 bits (136 bytes), capacity = 512 bits (64 bytes)
     const RATE = 136;
     const len = msg.length;
     let blocks = Math.floor(len / RATE) + 1;
@@ -21,13 +20,11 @@ function keccak256(hexInput) {
     let padded = new Uint8Array(paddedLen);
     padded.set(msg);
 
-    // Padding pattern: 0x01 ... 0x80
     padded[len] ^= 0x01;
     padded[paddedLen - 1] ^= 0x80;
 
     let state = new BigUint64Array(25);
 
-    // Round constants
     const RC = [
         0x0000000000000001n, 0x0000000000008082n, 0x800000000000808an, 0x8000000080008000n,
         0x000000000000808bn, 0x0000000080000001n, 0x8000000080008081n, 0x8000000000008009n,
@@ -50,7 +47,6 @@ function keccak256(hexInput) {
             state[i] ^= lane;
         }
 
-        // Keccak-f[1600] permutation
         for (let round = 0; round < 24; round++) {
             let C = new BigUint64Array(5);
             let D = new BigUint64Array(5);
@@ -129,7 +125,6 @@ self.onmessage = function (e) {
 function mine(challenge, target, userAddress) {
     let nonce = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
 
-    // Default to an easier baseline target if contract target isn't supplied
     const targetString = (target && target.startsWith('0x') && target.length === 66)
         ? target
         : "0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
@@ -139,7 +134,6 @@ function mine(challenge, target, userAddress) {
     function hashBatch() {
         if (!mining) return;
 
-        // If currently waiting for wallet signature, idle temporarily without generating nonces
         if (isPaused) {
             setTimeout(hashBatch, 100);
             return;
@@ -150,22 +144,20 @@ function mine(challenge, target, userAddress) {
             nonce++;
 
             let nonceHex = nonce.toString(16).padStart(64, '0');
-            const cleanChallenge = (challenge || "").startsWith('0x') ? challenge.slice(2) : (challenge || "");
-            const cleanAddress = (userAddress || "").startsWith('0x') ? userAddress.slice(2) : (userAddress || "");
+            const cleanAddress = (userAddress || "").toLowerCase().replace('0x', '').padStart(40, '0');
 
-            const input = '0x' + cleanChallenge.toLowerCase() + cleanAddress.toLowerCase() + nonceHex;
+            // Solidity abi.encodePacked(miner, nonce) -> Address (20 bytes) + Nonce (32 bytes)
+            const input = '0x' + cleanAddress + nonceHex;
             const computedHash = keccak256(input);
             const hashBN = BigInt(computedHash);
 
             if (hashBN <= targetBN) {
-                // Pause thread immediately when a valid share is found
                 isPaused = true;
                 self.postMessage({
                     status: 'SHARE_FOUND',
                     nonce: nonce.toString(),
                     hash: computedHash
                 });
-                // Continue loop after posting message so it checks isPaused status
                 setTimeout(hashBatch, 0);
                 return;
             }
