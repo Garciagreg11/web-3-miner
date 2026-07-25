@@ -124,7 +124,6 @@ export default function MiningPanel({
         functionName: 'submitShare',
         args: [cleanNonce],
         chainId: base.id,
-        gas: 150000n,
       });
       setFoundNonce(null);
       workerRef.current?.postMessage({ cmd: 'RESUME' });
@@ -150,7 +149,6 @@ export default function MiningPanel({
         abi: MINER_ABI,
         functionName: 'claimRewards',
         chainId: base.id,
-        gas: 100000n,
       });
     } catch (err: any) {
       if (!err?.message?.includes("User denied")) {
