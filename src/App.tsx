@@ -1,7 +1,13 @@
-'use client'
+k'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useAccount, useConnect, useReadContract, useWriteContract } from 'wagmi'
+import { 
+  useAccount, 
+  useConnect, 
+  useReadContract, 
+  useWriteContract, 
+  useSwitchChain 
+} from 'wagmi'
 import { base } from 'wagmi/chains'
 import { formatEther } from 'viem'
 import MiningPanel from './components/MiningPanel'
@@ -10,14 +16,16 @@ import MiningPanel from './components/MiningPanel'
 import { miningSessionContract } from './wagmi'
 
 // Safely extract the ABI array
-const rawAbi = miningSessionContract.abi as any;
+const rawAbi = (miningSessionContract as any)?.abi;
 const contractAbi = Array.isArray(rawAbi)
   ? rawAbi
   : rawAbi?.abi || rawAbi?.default || [];
 
 export default function App() {
-  const { isConnected, address } = useAccount()
+  const { isConnected, address, chainId } = useAccount()
+  const { switchChainAsync } = useSwitchChain()
   const { connect, connectors, error } = useConnect()
+  const { writeContractAsync } = useWriteContract()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -65,11 +73,17 @@ export default function App() {
 
   // ---------------- WRITE CONTRACT CALLS ----------------
 
-  const { writeContractAsync } = useWriteContract()
+  // Helper to ensure user is connected to Base mainnet
+  const ensureBaseNetwork = async () => {
+    if (chainId !== base.id && switchChainAsync) {
+      await switchChainAsync({ chainId: base.id });
+    }
+  }
 
   // submitShare: 1 input -> [nonce]
   async function submitShare(nonce: bigint | string) {
     try {
+      await ensureBaseNetwork();
       const cleanNonce = typeof nonce === 'string' ? BigInt(nonce) : nonce;
 
       await writeContractAsync({
@@ -77,7 +91,7 @@ export default function App() {
         abi: contractAbi,
         functionName: "submitShare",
         args: [cleanNonce],
-        chainId: base.id, // Explicitly target Base mainnet
+        chainId: base.id,
         gas: 150000n,
       })
     } catch (err) {
@@ -88,13 +102,15 @@ export default function App() {
   // claimRewards: 1 input -> [epoch]
   async function claimRewards() {
     try {
-      if (!work) return
+      if (!work) return;
+      await ensureBaseNetwork();
+
       await writeContractAsync({
         address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
         abi: contractAbi,
         functionName: "claimRewards",
         args: [currentEpoch],
-        chainId: base.id, // Explicitly target Base mainnet
+        chainId: base.id,
       })
     } catch (err) {
       console.error("Claim error:", err)
