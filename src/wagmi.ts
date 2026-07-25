@@ -8,9 +8,8 @@ export const config = createConfig({
     injected(),
   ],
   transports: {
-    [base.id]: http(),
+    [base.id]: http('https://mainnet.base.org'),
   },
 })
 
-// Export alias if any component imports wagmiConfig
-export const wagmiConfig = config
+export const MINER_CONTRACT_ADDRESS = '0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA' as const;
