@@ -1,21 +1,16 @@
-import { useAccount, useSwitchChain, useWriteContract } from 'wagmi';
-import { base } from 'wagmi/chains';
+import { http, createConfig } from 'wagmi'
+import { base } from 'wagmi/chains'
+import { injected } from 'wagmi/connectors'
 
-const { chainId } = useAccount();
-const { switchChain } = useSwitchChain();
-const { writeContract } = useWriteContract();
+export const config = createConfig({
+  chains: [base],
+  connectors: [
+    injected(),
+  ],
+  transports: {
+    [base.id]: http(),
+  },
+})
 
-const handleSubmitShare = async (nonce) => {
-  // Ensure user is on Base before writing to contract
-  if (chainId !== base.id) {
-    await switchChain({ chainId: base.id });
-  }
-
-  writeContract({
-    address: '0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA',
-    abi: contractAbi,
-    functionName: 'submitShare',
-    args: [nonce],
-    chain: base,
-  });
-};
+// Export alias if any component imports wagmiConfig
+export const wagmiConfig = config
