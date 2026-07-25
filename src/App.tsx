@@ -1,25 +1,67 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { 
-  useAccount, 
-  useConnect, 
-  useReadContract, 
-  useWriteContract, 
-  useSwitchChain 
+import {
+  useAccount,
+  useConnect,
+  useReadContract,
+  useWriteContract,
+  useSwitchChain
 } from 'wagmi'
 import { base } from 'wagmi/chains'
 import { formatEther } from 'viem'
 import MiningPanel from './components/MiningPanel'
 
-// Import the direct network definitions from wagmi configuration
-import { miningSessionContract } from './wagmi'
+// Contract ABI and Address directly defined to avoid module export issues
+const MINER_CONTRACT_ADDRESS = "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA" as const;
 
-// Safely extract the ABI array
-const rawAbi = (miningSessionContract as any)?.abi;
-const contractAbi = Array.isArray(rawAbi)
-  ? rawAbi
-  : rawAbi?.abi || rawAbi?.default || [];
+const contractAbi = [
+  {
+    "inputs": [],
+    "name": "getWork",
+    "outputs": [
+      { "type": "uint256", "name": "epoch" },
+      { "type": "uint256", "name": "difficultyOut" },
+      { "type": "uint256", "name": "targetOut" }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "type": "uint256", "name": "epoch" },
+      { "type": "address", "name": "miner" }
+    ],
+    "name": "getShares",
+    "outputs": [{ "type": "uint256", "name": "" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      { "type": "uint256", "name": "epoch" },
+      { "type": "address", "name": "miner" }
+    ],
+    "name": "pendingRewards",
+    "outputs": [{ "type": "uint256", "name": "" }],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "type": "uint256", "name": "nonce" }],
+    "name": "submitShare",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{ "type": "uint256", "name": "epoch" }],
+    "name": "claimRewards",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+] as const;
 
 export default function App() {
   const { isConnected, address, chainId } = useAccount()
@@ -36,7 +78,7 @@ export default function App() {
 
   // 1. getWork: 0 inputs -> returns (epoch, difficultyOut, targetOut)
   const { data: work, error: workError } = useReadContract({
-    address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
+    address: MINER_CONTRACT_ADDRESS,
     abi: contractAbi,
     functionName: "getWork",
     chainId: base.id,
@@ -53,7 +95,7 @@ export default function App() {
 
   // 2. getShares: 2 inputs -> [epoch, miner]
   const { data: shares } = useReadContract({
-    address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
+    address: MINER_CONTRACT_ADDRESS,
     abi: contractAbi,
     functionName: "getShares",
     args: [currentEpoch, safeAddress],
@@ -63,7 +105,7 @@ export default function App() {
 
   // 3. pendingRewards: 2 inputs -> [epoch, minerAddr]
   const { data: pendingRewards, isLoading: loadingRewards } = useReadContract({
-    address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
+    address: MINER_CONTRACT_ADDRESS,
     abi: contractAbi,
     functionName: "pendingRewards",
     args: [currentEpoch, safeAddress],
@@ -87,7 +129,7 @@ export default function App() {
       const cleanNonce = typeof nonce === 'string' ? BigInt(nonce) : nonce;
 
       await writeContractAsync({
-        address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
+        address: MINER_CONTRACT_ADDRESS,
         abi: contractAbi,
         functionName: "submitShare",
         args: [cleanNonce],
@@ -106,7 +148,7 @@ export default function App() {
       await ensureBaseNetwork();
 
       await writeContractAsync({
-        address: "0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA",
+        address: MINER_CONTRACT_ADDRESS,
         abi: contractAbi,
         functionName: "claimRewards",
         args: [currentEpoch],
@@ -192,8 +234,6 @@ export default function App() {
       shares={shares ? shares.toString() : "0"}
       pendingRewards={formattedRewards}
       loadingRewards={loadingRewards}
-      submitShare={submitShare}
-      claimRewards={claimRewards}
     />
   )
 }
