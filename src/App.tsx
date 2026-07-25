@@ -1,5 +1,5 @@
 import React from 'react';
-import { useReadContract, useAccount, WagmiProvider } from 'wagmi';
+import { useReadContract, useAccount, useConnect, useDisconnect, WagmiProvider } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from './wagmi';
 import MiningPanel from './components/MiningPanel';
@@ -46,6 +46,72 @@ const MINER_READ_ABI = [
 
 const queryClient = new QueryClient();
 
+function ConnectWalletHeader() {
+  const { address, isConnected } = useAccount();
+  const { connectors, connect } = useConnect();
+  const { disconnect } = useDisconnect();
+
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'flex-end',
+      padding: '15px 20px',
+      maxWidth: '600px',
+      margin: '0 auto -10px auto'
+    }}>
+      {isConnected ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{
+            color: '#00ffcc',
+            fontSize: '12px',
+            fontFamily: 'monospace',
+            background: 'rgba(0, 255, 204, 0.1)',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            border: '1px solid rgba(0, 255, 204, 0.3)'
+          }}>
+            {address?.slice(0, 6)}...{address?.slice(-4)}
+          </span>
+          <button
+            onClick={() => disconnect()}
+            style={{
+              background: '#222',
+              color: '#aaa',
+              border: '1px solid #333',
+              padding: '6px 12px',
+              borderRadius: '6px',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }}
+          >
+            Disconnect
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => {
+            const injectedConnector = connectors.find((c) => c.id === 'injected') || connectors[0];
+            if (injectedConnector) connect({ connector: injectedConnector });
+          }}
+          style={{
+            background: '#00ffcc',
+            color: '#000',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '6px',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            cursor: 'pointer'
+          }}
+        >
+          Connect Wallet
+        </button>
+      )}
+    </div>
+  );
+}
+
 function MainContent() {
   const { address } = useAccount();
 
@@ -86,14 +152,17 @@ function MainContent() {
     : "0.000000";
 
   return (
-    <MiningPanel
-      epoch={epochData ? epochData.toString() : '1'}
-      difficulty={diffData ? diffData.toString() : '16'}
-      target={targetData ? targetData.toString() : undefined}
-      shares={sharesData ? sharesData.toString() : '0'}
-      pendingRewards={formattedRewards}
-      loadingRewards={loadingRewards}
-    />
+    <div>
+      <ConnectWalletHeader />
+      <MiningPanel
+        epoch={epochData ? epochData.toString() : '1'}
+        difficulty={diffData ? diffData.toString() : '16'}
+        target={targetData ? targetData.toString() : undefined}
+        shares={sharesData ? sharesData.toString() : '0'}
+        pendingRewards={formattedRewards}
+        loadingRewards={loadingRewards}
+      />
+    </div>
   );
 }
 
