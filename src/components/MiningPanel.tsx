@@ -1,9 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAccount, useWriteContract } from 'wagmi';
+import { useAccount, useWriteContract, useSwitchChain } from 'wagmi';
 import { base } from 'wagmi/chains';
+
 const MINER_CONTRACT_ADDRESS = '0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA';
-
-
 
 const MINER_ABI = [
   {
@@ -39,8 +38,9 @@ export default function MiningPanel({
   pendingRewards,
   loadingRewards,
 }: MiningPanelProps) {
-  const { address } = useAccount();
+  const { address, chainId } = useAccount();
   const { writeContractAsync } = useWriteContract();
+  const { switchChainAsync } = useSwitchChain();
 
   const [isMining, setIsMining] = useState(false);
   const [hashrate, setHashrate] = useState(0);
@@ -65,7 +65,6 @@ export default function MiningPanel({
         setHashrate(currentHashrate);
         setTotalHashes(runHashes);
       } else if (status === 'SHARE_FOUND') {
-        // PAUSE worker so nonces freeze on screen for wallet signature
         workerRef.current?.postMessage({ cmd: 'PAUSE' });
         setFoundNonce(nonce);
       }
@@ -104,23 +103,30 @@ export default function MiningPanel({
     setFoundNonce(null);
   };
 
+  const ensureBaseChain = async () => {
+    if (chainId !== base.id) {
+      await switchChainAsync({ chainId: base.id });
+    }
+  };
+
   const handleSubmitShare = async () => {
     if (!foundNonce || !address) return;
     setError(null);
     setIsSubmitting(true);
 
     try {
+      await ensureBaseChain();
+
       const cleanNonce = BigInt(foundNonce);
       await writeContractAsync({
         address: MINER_CONTRACT_ADDRESS,
         abi: MINER_ABI,
         functionName: 'submitShare',
         args: [cleanNonce],
-        chainId: base.id, // Enforce Base network explicitly
+        chainId: base.id,
         gas: 150000n,
       });
       setFoundNonce(null);
-      // Resume hashing after successful wallet confirmation
       workerRef.current?.postMessage({ cmd: 'RESUME' });
     } catch (err: any) {
       if (!err?.message?.includes("User denied")) {
@@ -137,11 +143,13 @@ export default function MiningPanel({
     setIsClaiming(true);
 
     try {
+      await ensureBaseChain();
+
       await writeContractAsync({
         address: MINER_CONTRACT_ADDRESS,
         abi: MINER_ABI,
         functionName: 'claimRewards',
-        chainId: base.id, // Enforce Base network explicitly
+        chainId: base.id,
         gas: 100000n,
       });
     } catch (err: any) {
