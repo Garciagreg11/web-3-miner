@@ -3,7 +3,7 @@ import { useAccount, useWriteContract } from 'wagmi';
 import { base } from 'wagmi/chains';
 const MINER_CONTRACT_ADDRESS = '0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA';
 
-const MINER_CONTRACT_ADDRESS = miningSessionContract.address;
+
 
 const MINER_ABI = [
   {
