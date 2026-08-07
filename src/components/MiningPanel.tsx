@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useAccount, useWriteContract, useSwitchChain } from 'wagmi';
+import { useAccount, useWriteContract, useConfig } from 'wagmi';
+import { waitForTransactionReceipt } from '@wagmi/core';
 import { base } from 'wagmi/chains';
 
 const MINER_CONTRACT_ADDRESS = '0x41c1ce19f1b8774f27E1E38E17b50cB02A32E4FA';
@@ -38,9 +39,9 @@ export default function MiningPanel({
   pendingRewards,
   loadingRewards,
 }: MiningPanelProps) {
-  const { address, chainId } = useAccount();
+  const { address } = useAccount();
+  const config = useConfig();
   const { writeContractAsync } = useWriteContract();
-  const { switchChainAsync } = useSwitchChain();
 
   const [isMining, setIsMining] = useState(false);
   const [hashrate, setHashrate] = useState(0);
@@ -53,28 +54,28 @@ export default function MiningPanel({
   const workerRef = useRef<Worker | null>(null);
 
   useEffect(() => {
-    workerRef.current = new Worker(
-      new URL('../mining-worker.js', import.meta.url),
-      { type: 'module' }
-    );
+    const worker = new Worker('/mining-worker.js');
+    workerRef.current = worker;
 
-    workerRef.current.onmessage = (e) => {
+    worker.onmessage = (e) => {
       const { status, hashrate: currentHashrate, totalHashes: runHashes, nonce } = e.data;
 
       if (status === 'PROGRESS') {
         setHashrate(currentHashrate);
         setTotalHashes(runHashes);
       } else if (status === 'SHARE_FOUND') {
-        workerRef.current?.postMessage({ cmd: 'PAUSE' });
         setFoundNonce(nonce);
       }
     };
 
+    worker.onerror = (err) => {
+      console.error("Worker Execution Error:", err);
+      setError("Worker script failed to execute. Ensure /public/mining-worker.js exists.");
+    };
+
     return () => {
-      if (workerRef.current) {
-        workerRef.current.terminate();
-        workerRef.current = null;
-      }
+      worker.terminate();
+      workerRef.current = null;
     };
   }, []);
 
@@ -86,14 +87,15 @@ export default function MiningPanel({
     setError(null);
     setFoundNonce(null);
 
-    workerRef.current?.postMessage({
-      cmd: 'START',
-      target: target || "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-      challenge: epoch || "0x0000000000000000000000000000000000000000000000000000000000000001",
-      userAddress: address
-    });
-
-    setIsMining(true);
+    if (workerRef.current) {
+      workerRef.current.postMessage({
+        cmd: 'START',
+        target: target || "0x0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+        challenge: epoch || "0x0000000000000000000000000000000000000000000000000000000000000001",
+        userAddress: address
+      });
+      setIsMining(true);
+    }
   };
 
   const stopMining = () => {
@@ -103,34 +105,38 @@ export default function MiningPanel({
     setFoundNonce(null);
   };
 
-  const ensureBaseChain = async () => {
-    if (chainId !== base.id) {
-      await switchChainAsync({ chainId: base.id });
-    }
-  };
-
   const handleSubmitShare = async () => {
     if (!foundNonce || !address) return;
     setError(null);
     setIsSubmitting(true);
 
     try {
-      await ensureBaseChain();
-
       const cleanNonce = BigInt(foundNonce);
-      await writeContractAsync({
+
+      // 1. Broadcast transaction to Base Mainnet
+      const txHash = await writeContractAsync({
         address: MINER_CONTRACT_ADDRESS,
         abi: MINER_ABI,
         functionName: 'submitShare',
         args: [cleanNonce],
         chainId: base.id,
       });
+
+      // 2. Await block inclusion on-chain
+      await waitForTransactionReceipt(config, {
+        hash: txHash,
+        confirmations: 1,
+      });
+
       setFoundNonce(null);
       workerRef.current?.postMessage({ cmd: 'RESUME' });
+
     } catch (err: any) {
+      console.error("Submit Share Error:", err);
       if (!err?.message?.includes("User denied")) {
         setError(err?.message || "Failed to submit share.");
       }
+      workerRef.current?.postMessage({ cmd: 'RESUME' });
     } finally {
       setIsSubmitting(false);
     }
@@ -142,13 +148,18 @@ export default function MiningPanel({
     setIsClaiming(true);
 
     try {
-      await ensureBaseChain();
-
-      await writeContractAsync({
+      // 1. Broadcast claim transaction
+      const txHash = await writeContractAsync({
         address: MINER_CONTRACT_ADDRESS,
         abi: MINER_ABI,
         functionName: 'claimRewards',
         chainId: base.id,
+      });
+
+      // 2. Await block inclusion on-chain
+      await waitForTransactionReceipt(config, {
+        hash: txHash,
+        confirmations: 1,
       });
     } catch (err: any) {
       if (!err?.message?.includes("User denied")) {

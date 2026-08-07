@@ -3,9 +3,9 @@ let isPaused = false;
 let loopRunning = false;
 let totalHashes = 0;
 let startTime = Date.now();
-let activeNonce = 0n;
 
-const hashRateDivider = 1;
+// Hashrate scaling factor (e.g. 100 scales down reported Hashes/sec metric)
+const hashRateDivider = 100;
 
 // Standard Keccak-256 implementation
 function keccak256(hexInput) {
@@ -38,6 +38,7 @@ function keccak256(hexInput) {
         0x8000000080008081n, 0x8000000000008080n, 0x0000000080000001n, 0x8000000080008008n
     ];
 
+    // Keccak-256 offset matrix mapped by x + 5 * y
     const R = [
         0, 36, 3, 41, 18,
         1, 44, 10, 45, 2,
@@ -117,14 +118,12 @@ self.onmessage = function (e) {
         isPaused = false;
         totalHashes = 0;
         startTime = Date.now();
-        activeNonce = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
 
         mine(challenge, target, userAddress);
     } else if (cmd === 'PAUSE') {
         isPaused = true;
     } else if (cmd === 'RESUME') {
         isPaused = false;
-        activeNonce += 1000n;
     } else if (cmd === 'STOP') {
         mining = false;
         isPaused = false;
@@ -133,12 +132,15 @@ self.onmessage = function (e) {
 };
 
 function mine(challenge, target, userAddress) {
+    let nonce = BigInt(Math.floor(Math.random() * Number.MAX_SAFE_INTEGER));
+
     const targetString = (target && target.startsWith('0x') && target.length === 66)
         ? target
-        : "0x0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+        : "0x0fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
 
     const targetBN = BigInt(targetString);
 
+    // Format inputs for Solidity abi.encodePacked(bytes32 challenge, address miner, uint256 nonce)
     const cleanChallenge = (challenge || "").toLowerCase().replace('0x', '').padStart(64, '0');
     const cleanAddress = (userAddress || "").toLowerCase().replace('0x', '').padStart(40, '0');
 
@@ -154,28 +156,32 @@ function mine(challenge, target, userAddress) {
         }
 
         const batchSize = 300;
-        let foundShareInBatch = false;
-        let solvedNonce = null;
-        let solvedHash = null;
-
         for (let i = 0; i < batchSize; i++) {
-            activeNonce++;
+            nonce++;
 
-            let nonceHex = activeNonce.toString(16).padStart(64, '0');
+            let nonceHex = nonce.toString(16).padStart(64, '0');
+
+            // abi.encodePacked(challenge [32b], miner [20b], nonce [32b])
             const input = '0x' + cleanChallenge + cleanAddress + nonceHex;
             const computedHash = keccak256(input);
             const hashBN = BigInt(computedHash);
 
-            if (hashBN <= targetBN && !foundShareInBatch) {
-                foundShareInBatch = true;
-                solvedNonce = activeNonce.toString();
-                solvedHash = computedHash;
+            if (hashBN <= targetBN) {
+                isPaused = true;
+                self.postMessage({
+                    status: 'SHARE_FOUND',
+                    nonce: nonce.toString(),
+                    hash: computedHash
+                });
+                setTimeout(hashBatch, 0);
+                return;
             }
         }
 
         totalHashes += batchSize;
         const elapsedSeconds = (Date.now() - startTime) / 1000;
-
+        
+        // Tuned calculation apply scale divider
         const rawHashrate = Math.floor(totalHashes / (elapsedSeconds || 1));
         const currentHashrate = Math.floor(rawHashrate / hashRateDivider);
 
@@ -184,15 +190,6 @@ function mine(challenge, target, userAddress) {
             hashrate: currentHashrate,
             totalHashes: totalHashes
         });
-
-        if (foundShareInBatch) {
-            self.postMessage({
-                status: 'SHARE_FOUND',
-                nonce: solvedNonce,
-                hash: solvedHash
-            });
-            activeNonce += 1000n;
-        }
 
         setTimeout(hashBatch, 0);
     }
